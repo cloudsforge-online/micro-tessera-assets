@@ -1,6 +1,6 @@
 {
   "$comment": "The generation plan, derived by plan.ts from content/*.json and written by `generate.ts --plan`. Reviewable before a single generation is paid for. Do not edit by hand: it is regenerated from the content, which is the point of it. `assets` are the 288 GENERATED entries and `derived` are the 104 that are cut, projected or composited from them — 392 in total, which is doc 23 §2.3.",
-  "generatedAt": "2026-08-03T11:38:38.919Z",
+  "generatedAt": "2026-08-03T12:11:20.007Z",
   "palette": {
     "#6d9a49": {
       "name": "a moss green",
