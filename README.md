@@ -114,6 +114,44 @@ One clause is aimed at the *challenger's* known failure modes — `ARTEFACT_GUAR
 frame, the recursion and the pastiche. It goes to **both** models identically and COMPARISON.md §4
 discloses it when reading the artefact counts.
 
+### 5.1 Why the overlay repair is not a dialect, having been considered as one
+
+`dialects.json` registers a `positive` dialect — the estate's briefs with every prohibition
+restated as an assertion — and §8 defect 1 is exactly a prohibition that needed restating
+positively, so the obvious instrument was to put the 40 overlays in that dialect. **It is the wrong
+instrument, for three reasons, two of them measurable now.**
+
+1. **A dialect is per-SET, not per-asset.** `providers.json` carries one `dialect` field per
+   provider and `promptForProvider` reads it once; there is nowhere to say "these forty". Putting
+   the overlays in `positive` means putting all 288 in it, which would restate the question every
+   FLUX asset was asked and dissolve the controlled comparison this repository exists to run.
+2. **`positive` does not currently apply to this corpus at all.** `python3 dialects.py --residuals`
+   reports **0 of 288 recorded prompts transform clean** — every one still owes `no`, `not` or
+   `nothing` after the rules run, because the 31 rules were written against the sibling
+   repositories' briefs and Tessera's `PLATE_TAIL`, `FLAT_GROUND_CLAUSE`, `paletteClause` and
+   `ARTEFACT_GUARD` are not among them. `promptForProvider` would therefore throw
+   `ResidualNegationError` on every asset. Adopting the dialect here is a corpus-wide project, not
+   a forty-asset one.
+3. **The record was wrong, and a dialect translates the record rather than correcting it.**
+   `replay.ts` is explicit that only the `literal` dialect may change the question an asset is
+   asked, and that `--reprompt` is the way and is reference-only. A defect in the brief is exactly
+   what that mechanism is for.
+
+So the repair is a `--reprompt` of the 40 reference overlays in the `literal` dialect, written
+using the `positive` dialect's documented *method* — a forbidden region becomes a measurement of
+the region that is drawn. Parity is preserved by the existing replay: the candidate re-generated
+the same 40 from the reference's new record, and check 10 still reports **0 disagreements across
+392 entries in both sets**.
+
+**One thing that machinery claims about itself is not true here, and is worth flagging rather than
+repeating.** `dialects.py` and `replay.ts` both state that `verify.py --parity` re-derives a
+candidate's prompt from the reference record by applying the dialect's rules, and that this is
+strictly stronger than equality. `verify.py` in this repository does no such thing: `grep -c
+dialect verify.py` returns **0**, and `check_parity` compares SHA-256 of the two recorded prompts.
+That is the correct check while every set here is `literal` — the two are the same test when the
+transform is the identity — but the guarantee as documented is not the guarantee as implemented,
+and a set that adopted a non-literal dialect would silently lose the check its own comments promise.
+
 ## 6. C2PA is measured, never asserted
 
 `carries_c2pa = b"c2pa" in data`, compared against the manifest flag, on every file, every run.
@@ -158,29 +196,97 @@ every integrity check on both: checksums, dimensions, C2PA measured off the byte
 no orphan files, **0 transposed assets across all 68 non-square generations** and **0 prompt
 disagreements across all 392 entries in both sets**. What follows is what is *not* right.
 
-**1. The paper doll does not composite. This is the big one.**
+**1. The paper doll composites better than it did, and still does not composite. This is the big one.**
 `verify.py` check 8 measures every avatar overlay's opaque bounding box against its slot's band.
-**32 of FLUX's 40 overlays and 40 of 40 of Qwen's are misregistered.** The garments themselves are
-excellent — they are among the best sprite work in the set — but each is drawn as its own centred
-subject filling its frame rather than as a plate registered to the shared silhouette, so a `feet`
-plate is a pair of legs spanning 0.03–0.91 of the frame instead of boots in the bottom eighth.
+The 40 overlays have now been regenerated once per model against a rewritten registration clause.
+**The check went from 32 misregistered of 40 to 28 on FLUX, and from 40 of 40 to 40 of 40 on Qwen.**
 
-The cause is in the brief, not the models: the registration instruction is a *prohibition* ("draw
-only the named region, leave the rest empty") at the end of a long prompt, and both models honoured
-the positive half and ignored the negative half identically. **When two independent models fail one
-instruction the same way, the instruction is the defect.** The fix is to restate the region
-positively and regenerate the 40 overlays per model; the estate's `positive` prompt dialect exists
-for exactly this and is the right instrument. Until then the 8 avatar bases are usable and the 40
-overlays are not, so §6.3's 131,072 distinct avatars is a design claim this asset set does not yet
-deliver.
+| slot | FLUX registered before → after | Qwen |
+| --- | --- | --- |
+| `held` | 1/8 → **6/8** | 0/8 → 0/8 |
+| `top` | 1/8 → **3/8** | 0/8 → 0/8 |
+| `legs` | 0/8 → 1/8 | 0/8 → 0/8 |
+| `feet` | 0/8 → 0/8 | 0/8 → 0/8 |
+| `hair` | **6/8 → 2/8** | 0/8 → 0/8 |
+| total | 8/40 → 12/40 | 0/40 → 0/40 |
 
-**2. The scene ground clause contradicts the daylight ward descriptions.**
+Mean ink height fell from 0.671 of the frame to 0.544 on FLUX and from 0.922 to 0.904 on Qwen.
+
+**The number understates what changed on FLUX and the pictures do not.** Every overlay used to be
+a clothed figure: `feet-bare` was a pair of legs, `held-sketchbook` was a person holding a book,
+`top-tunic` was someone wearing a tunic. They are now isolated plates — a tunic with nobody in it,
+a lantern on its own, boots without legs — and **no garment lost its identity in the process**;
+the new plates are, if anything, better sprite work than the ones they replace. What check 8 still
+fails them for is SCALE rather than subject: a tunic drawn alone is still drawn centred and large,
+spanning 0.17–0.84 where its band allows 0.10–0.72. That is a smaller and different defect from
+the one recorded here before, and it is the one left.
+
+**The original diagnosis was half right, and the half that was wrong is worth keeping.** This file
+argued: *when two independent models fail one instruction the same way, the instruction is the
+defect.* The instruction WAS defective — it was a prohibition ("draw only the named region, leave
+the rest empty") buried third of eight parts, and restating it positively in the final position
+moved FLUX substantially. But the same fix moved Qwen by nothing at all, so the identical failure
+was two different causes wearing one face rather than one cause. **An identical failure across two
+models is evidence about the instruction, not proof about it**, and the way to tell the difference
+is to fix the instruction and re-measure, which is now done.
+
+Three findings paid for by that re-measurement, all recorded in `generate.ts` where the clause is:
+
+* **A silhouette is registration data, not subject matter.** The first attempt still described the
+  shared silhouette to the model — "a standing adult figure occupying the centre of a tall narrow
+  frame, head near the top, feet just above the bottom edge" — one sentence before the band. That
+  version took `held` from 1/8 to 5/8 and left `top` at 0/8. A lantern is an object and a band tells
+  a model where to put it; a garment is worn, and a vivid description of a standing figure is an
+  instruction to draw one. Overlays are no longer told the silhouette.
+* **The first sentence outranks the rest of the brief.** `AVATAR_STYLE` opened "a single CHARACTER
+  PLATE", to all 40 overlays. Wardrobe plates now say wardrobe plate.
+* **Two constraints that cannot both hold are worse than one.** The clause asked for the item at
+  "about two thirds of the frame width" *inside its band* — 170 px of width in a 102 px band on a
+  `feet` plate — so a model preserving the item's proportions had to overflow the band to obey.
+
+**The `hair` slot regressed, 6/8 to 2/8, and it is left visible rather than tuned away.** Removing
+the silhouette removed the head-near-the-top anchor that compact hairstyles were relying on, and
+"as large as it can be" then grew them past their band. Fixing garments cost hair. Run-to-run
+variance on this endpoint is about ±0.10 of frame height, measured across three generations of the
+same six assets, which is why the later iterations were piloted on six rather than validated on
+forty — and why no single asset's number here should be read as more precise than the spread.
+
+**Qwen's overlays are not misregistered game art. They are not game art.** Reading the bytes rather
+than the check: `top-tunic` is a photograph of a woman on a lawn in front of a chateau, and
+`held-lantern` is a photoreal portrait of a young man in a bow tie. **This was already true of the
+original set** — the same assets were full-body photoreal portraits of people — so it is a
+pre-existing failure that the previous entry here, by reporting only a bounding-box number,
+described far too gently. For this one asset class the model is not answering the brief at all, and
+no registration clause will change that.
+
+So §6.3's 131,072 distinct avatars remains a design claim this asset set does not yet deliver, on
+either model — but on FLUX what stands between it and delivery is now a scale correction on 28
+plates rather than 32 plates of the wrong subject.
+
+**2. The scene ground clause contradicted the daylight ward descriptions. Fixed, and the exemption
+is deleted.**
 `content/wards.json` defines `day` as "flat even daylight, high sun" while `SCENE_GROUND_CLAUSE`
-demands the frame's edges "fall away into that darkness rather than into grey, white or pale blue".
-Both are in the same prompt. Both models resolved it the same way and correctly for the subject —
-`saltflat-day` has a sky-blue horizon — so `verify.py` reads time of day off the content exactly as
-the prompt does and exempts the `-day` backdrops. **That exemption is a content defect made
-visible, not a check softened to go green**, and it should be deleted once the clause is fixed.
+demanded the frame's edges "fall away into that darkness rather than into grey, white or pale
+blue". Both were in the same prompt. The darkness requirement is now **conditional on the light the
+scene is described as having** and names the daylight case instead of forbidding it, so
+`verify.py`'s `is_daylight` exemption has been deleted and the ceiling runs on all sixteen
+backdrops.
+
+**What that revealed is not what this file predicted.** It claimed both models resolved the
+contradiction the same way. They did not:
+
+| | day backdrops over the 0.12 edge ceiling |
+| --- | --- |
+| FLUX | **2 of 8** — `saltflat-day` 0.416 (`#64b9c9`), `wharf-day` 0.479 (`#a9bcb9`); the other six 0.000–0.007 |
+| Qwen | **0 of 8** — all eight 0.001–0.007 |
+
+FLUX painted daylight on two of eight; Qwen painted the dark clause on eight of eight, with
+`saltflat-day` corners at `#1c120a` under a brief that says "high sun". The exemption was written
+for a symmetry that never existed: it was covering two FLUX assets, and it was suppressing the only
+check that would have noticed Qwen never painting a daylight sky at all. The two are **left red
+rather than excused**, and they are the two worth regenerating first against the fixed clause —
+`wharf-day`'s `#a9bcb9` is a desaturated pale band, which is the failure the clause guards against
+rather than the daylight it now permits.
 
 **3. Two small artefacts.** `icons/royalty` (FLUX) drew a **dollar sign** into the coin — wrong
 twice, since nothing is meant to be written in any image here and a fiat symbol is specifically

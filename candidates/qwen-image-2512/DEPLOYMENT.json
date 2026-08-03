@@ -32,6 +32,28 @@
       "figure somebody would later quote."
     ]
   },
+  "regeneration": {
+    "$note": [
+      "A SECOND WINDOW, opened to repair README section 8 defect 1 — the paper doll that does not",
+      "composite. The 40 avatar overlays were regenerated against a rewritten registration clause.",
+      "",
+      "THE 40 IMAGES TOOK 3 MINUTES 36 SECONDS. The deployment was held open for about six hours",
+      "to deliver them, because a candidate can only replay a prompt the reference has already",
+      "recorded and the reference endpoint spent that time being rate-limited at roughly 1.5",
+      "generations a minute, refusing about one request in five on content safety, and being",
+      "iterated on across three prompt versions. This is the SAME finding this file already",
+      "recorded, reproduced exactly: the per-hour deployment bills at the pace of the slowest model",
+      "in the comparison. The ordering advice was followed — the reference half was generated",
+      "first — and it did not help, because the dependency is per-asset rather than per-run.",
+      "",
+      "The honest conclusion for a future run is stronger than the one recorded above: do not bring",
+      "a per-hour deployment up until the reference set's prompts are FINAL, not merely started."
+    ],
+    "startedAt": "2026-08-03T16:55:05.257Z",
+    "finishedAt": "2026-08-03T16:58:41.433Z",
+    "generations": 40,
+    "wallClockMinutes": 3.6
+  },
   "generation": {
     "startedAt": "2026-08-03T10:03:07.876Z",
     "finishedAt": "2026-08-03T14:21:00.929Z",
@@ -66,7 +88,25 @@
     ]
   },
   "teardown": {
-    "state": "READY FOR TEARDOWN \u2014 both sets are complete (288 generated + 104 derived per model) and nothing further will be sent to this endpoint. The owner deletes it.",
+    "state": "READY FOR TEARDOWN \u2014 both sets are complete (288 generated + 104 derived per model), the 40-overlay regeneration is landed, and nothing further will be sent to this endpoint. The owner deletes it.",
+    "$readyBecause": [
+      "Stated a second time, and this time with a reason to STOP rather than only a reason to be",
+      "finished. The overlay regeneration moved the reference model (32 misregistered of 40 down to",
+      "28, and qualitatively much further \u2014 the garments are now isolated plates rather than",
+      "clothed figures) and moved this candidate NOT AT ALL: 40 of 40 misregistered before and 40",
+      "of 40 after.",
+      "",
+      "Looking at the bytes says why, and it is worse than a registration fault. This model's",
+      "avatar overlays are not game art at all: `top-tunic` is a photograph of a woman on a lawn in",
+      "front of a chateau, `held-lantern` is a photoreal portrait of a young man in a bow tie, and",
+      "`feet-boots` is a tiger with garbled lettering across it. That was ALREADY TRUE of the",
+      "original set \u2014 the same three assets were full-body photoreal portraits of people \u2014 so it is",
+      "a pre-existing failure this repair merely made visible, rather than one it caused.",
+      "",
+      "So there is no iteration left that this deployment is the bottleneck for. Further prompt",
+      "work on the overlays is reference-side, and this endpoint can only replay what the reference",
+      "records. Holding it open costs money and buys nothing."
+    ],
     "at": null,
     "$note": [
       "This run does not tear the deployment down, because it was not this run that brought it up.",
