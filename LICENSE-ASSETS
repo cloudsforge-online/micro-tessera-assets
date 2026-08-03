@@ -1,0 +1,35 @@
+Creative Commons Attribution 4.0 International (CC BY 4.0)
+
+Copyright (c) 2026 CloudsForge
+
+THE IMAGES IN THIS REPOSITORY ARE LICENSED SEPARATELY FROM THE CODE.
+
+The source code here -- the generation pipeline, the verification scripts and
+the tests -- is under the MIT licence in LICENSE. Every raster image (the PNG
+files under assets/ and candidates/) is instead licensed under the Creative
+Commons Attribution 4.0 International licence, because MIT is a software
+licence and these are not software.
+
+You are free to:
+
+  Share  -- copy and redistribute the images in any medium or format
+  Adapt  -- remix, transform and build upon them, for any purpose, including
+            commercially
+
+Under the following term:
+
+  Attribution -- You must give appropriate credit to CloudsForge, provide a
+  link to this licence, and indicate if changes were made. You may do so in any
+  reasonable manner, but not in any way that suggests CloudsForge endorses you
+  or your use.
+
+The full licence text is at https://creativecommons.org/licenses/by/4.0/legalcode
+
+TRADEMARKS ARE NOT LICENSED. The CloudsForge and Forge names, logos and
+wordmarks are trademarks and are excluded from the grant above. See TRADEMARKS.md.
+
+HOW THESE IMAGES WERE MADE. They were generated with FLUX 2 Pro under paid
+commercial API access, and each carries C2PA provenance metadata and an
+invisible provider watermark. That metadata is part of the file by design and
+should not be stripped; it is what lets a viewer establish where the image came
+from.
