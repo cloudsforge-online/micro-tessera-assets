@@ -2,7 +2,7 @@
  * The prompt-parity suite: the property the whole comparison rests on, asserted rather than
  * maintained by convention.
  *
- *     cd ../studio && node --import tsx --test ../aetherholm-assets/parity.test.ts
+ *     cd ../studio && node --import tsx --test ../tessera-assets/parity.test.ts
  *
  * The property is **"every model is asked the same question about a given asset"**. It is NOT "the
  * prompt-building code produces the prompt that is on record", and the difference is the design:
@@ -83,40 +83,64 @@ test('every provider is given the same prompt for the same asset', () => {
   assert.ok(compared > 20, `only ${compared} assets had a recorded prompt to compare`)
 })
 
+/**
+ * Drift, constructed rather than borrowed from history.
+ *
+ * The sibling repositories test this against assets whose recorded prompt their current code no
+ * longer produces — real drift, left behind when clauses were edited after a run. This repository
+ * has none, because it is new and nothing has been edited since its run started, and the inherited
+ * test asserted `drifted.length > 0` and therefore failed on a repository in a BETTER state than
+ * the one it was written for.
+ *
+ * Its own failure message said what to do: give it a synthetic fixture. So the drift is
+ * manufactured here — a `compute` that deliberately returns something no record could contain —
+ * which tests the property directly instead of depending on a repository having accumulated a
+ * particular kind of history. It also keeps testing once the drift is real.
+ */
+const DRIFTED = 'FRESHLY COMPUTED — this string is in no manifest and must never reach a wire'
+const computeDrifted = (): string => DRIFTED
+
+/** Any asset the reference has actually generated. Undefined before the first generation lands. */
+function recordedAsset() {
+  const recorded = referencePrompts()
+  return plannedAssets().find((planned) => recorded.has(identityFor(planned).key))
+}
+
 test('every provider replays the recorded prompt, including the reference', () => {
   const recorded = referencePrompts()
-  // The case that makes this worth testing: an asset whose recorded prompt the current code no
-  // longer produces. If ANY provider recomputed instead of replaying, regenerating one of these
+  // The case that makes this worth testing: the current code would produce something OTHER than
+  // what is on record. If any provider recomputed instead of replaying, regenerating that asset
   // would ask that model a different question from the one the others answered, and every other
   // check in the repository would stay green while the comparison stopped meaning anything.
-  const drifted = plannedAssets().filter((planned) => {
+  let compared = 0
+  for (const planned of plannedAssets()) {
     const record = recorded.get(identityFor(planned).key)
-    return record !== undefined && record !== promptFor(planned)
-  })
-  assert.ok(drifted.length > 0, 'no drifted asset to test against; give this a synthetic fixture')
-  for (const planned of drifted) {
+    if (record === undefined) continue
     for (const provider of PROVIDERS) {
       assert.equal(
-        promptForProvider(provider.id, planned, compute),
-        recorded.get(identityFor(planned).key),
+        promptForProvider(provider.id, planned, computeDrifted),
+        record,
         `${identityFor(planned).key}: ${provider.id} was not given the recorded prompt`,
       )
     }
+    compared += 1
   }
+  assert.ok(compared > 0, 'the reference manifest carries no prompts to replay')
 })
 
 test('changing the question is deliberate and reference-only', () => {
-  const recorded = referencePrompts()
-  const drifted = plannedAssets().find((planned) => {
-    const record = recorded.get(identityFor(planned).key)
-    return record !== undefined && record !== promptFor(planned)
-  })!
-  const reprompted = promptForProvider(REFERENCE.id, drifted, compute, { reprompt: true })
-  assert.equal(reprompted, promptFor(drifted))
-  assert.notEqual(reprompted, recorded.get(identityFor(drifted).key))
+  const planned = recordedAsset()
+  assert.ok(planned, 'the reference manifest carries no prompts to replay')
+  const recorded = referencePrompts().get(identityFor(planned).key)!
+
+  // Only --reprompt gets you the freshly computed string, and only on the reference.
+  const reprompted = promptForProvider(REFERENCE.id, planned, computeDrifted, { reprompt: true })
+  assert.equal(reprompted, DRIFTED)
+  assert.notEqual(reprompted, recorded)
+
   for (const candidate of CANDIDATES) {
     assert.throws(
-      () => promptForProvider(candidate.id, drifted, compute, { reprompt: true }),
+      () => promptForProvider(candidate.id, planned, computeDrifted, { reprompt: true }),
       RepromptNotForCandidateError,
     )
   }
@@ -304,4 +328,51 @@ test('the two implemented backends are given the identical prompt for one asset'
 test('c2pa is read off the bytes, never asserted', () => {
   assert.equal(measureC2pa(Buffer.from('\x89PNG....c2pa....')), true)
   assert.equal(measureC2pa(Buffer.from('\x89PNG....IDAT....')), false)
+})
+
+test('every non-square asset in THIS set is requested transposed', () => {
+  // The generic transposition test above pins `sizeParamFor` on invented sizes. This one pins it
+  // on the 68 real non-square assets this repository will actually generate — every avatar plate
+  // at 256x512, every ward backdrop at 1536x640 and the four wide title assets — because that is
+  // the population the bug would have silently rotated. A square cannot show the fault, so a set
+  // that happened to be all squares would pass the other test and prove nothing about this one.
+  const qwen = providerById('qwen-image-2512')
+  const backend = openAiImagesBackend(qwen, {
+    baseUrl: 'https://h.example',
+    apiKey: 'k',
+    deployment: qwen.deployment!,
+    route: qwen.route!,
+  })
+
+  const nonSquare = plannedAssets().filter((a) => a.width !== a.height)
+  assert.equal(nonSquare.length, 68, 'doc 23 §2.3 puts 68 non-square generations in this set')
+
+  for (const planned of nonSquare) {
+    const body = backend.bodyFor({
+      prompt: 'x',
+      spec: { kind: 'banner', width: planned.width, height: planned.height, format: 'png' },
+      requestWidth: planned.width,
+      requestHeight: planned.height,
+      kitName: planned.name,
+      accent: planned.accent,
+    })
+    assert.equal(
+      body['size'],
+      `${planned.height}x${planned.width}`,
+      `${planned.key}: the envelope must ask for the transpose to receive ${planned.width}x${planned.height}`,
+    )
+  }
+
+  // And every square one is unaffected, which is precisely why the fault hides.
+  for (const planned of plannedAssets().filter((a) => a.width === a.height)) {
+    const body = backend.bodyFor({
+      prompt: 'x',
+      spec: { kind: 'tile', width: planned.width, height: planned.height, format: 'png' },
+      requestWidth: planned.width,
+      requestHeight: planned.height,
+      kitName: planned.name,
+      accent: planned.accent,
+    })
+    assert.equal(body['size'], `${planned.width}x${planned.height}`)
+  }
 })

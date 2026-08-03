@@ -23,7 +23,8 @@ produces is a verdict per criterion with named examples, which is what COMPARISO
   2. **Style coherence WITHIN the set** — measurable, and the interesting one. It also carries
      more weight the fewer models there are: with a single challenger, "which is better" collapses
      into a per-asset beauty contest unless the set-level judgement is doing real work.
-     Aetherholm: painterly islands, buildings and airships under ART_BIBLE.md, plus flat icon and heraldry sets.
+     Tessera: painterly isometric terrain plates, seed objects, a structure kit, paper-doll avatars,
+     ward backdrops and Kiln art under ART_BIBLE.md, plus flat glyph, icon and chrome sets.
      Judged WITHIN this set only. The estate's three asset sets are deliberately unalike, and a
      model that makes them look like each other has failed rather than succeeded — so there is no
      cross-repository coherence number here, and there must not be one. Not "is this image
@@ -498,7 +499,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Compare the generated sets against each other.")
     providers.add_argument(parser)
     parser.add_argument("--no-sheets", action="store_true", help="skip the side-by-side images")
-    parser.add_argument("--kinds", nargs="*", default=["islands", "buildings", "ships", "shipicons", "icons", "heraldry", "keyart", "splashes", "title"],
+    parser.add_argument("--kinds", nargs="*", default=["terrain", "objects", "structure", "avatar", "backdrop", "kiln", "glyphs", "icons", "markers", "keyart", "chrome", "splashes"],
                         help="which sets to build side-by-side sheets for")
     args = parser.parse_args()
 
