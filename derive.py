@@ -65,7 +65,16 @@ def digest(path: Path) -> tuple[str, int, bool]:
 
 
 def entry(parent: dict, *, asset: str, slug: str, path: Path, declared: tuple[int, int],
-          source: Path, cropped: bool, steps: list[str], note: str) -> dict:
+          source: Path, cropped: bool, steps: list[str], note: str,
+          ground_class: str | None = None) -> dict:
+    """One derivative's provenance, inheriting the parent's generation facts.
+
+    `ground_class` overrides the parent's, and exactly one derivative needs it. `wordmark-lockup`
+    is the mark composited onto `keyart/wordmark-ground`, which is a SCENE — so it inherits
+    `flat` from the mark and is then measured against the exact-#12100f corner rule, which it
+    cannot pass because its background is a painting. verify.py caught that as 308 of 309 corner
+    colours being wrong; the file was correct and its manifest entry was not.
+    """
     sha, size, c2pa = digest(path)
     with Image.open(path) as image:
         delivered = image.size
@@ -78,7 +87,7 @@ def entry(parent: dict, *, asset: str, slug: str, path: Path, declared: tuple[in
         "path": str(path.relative_to(ROOT)),
         "accent": parent["accent"],
         "secondaryAccent": parent["secondaryAccent"],
-        "groundClass": parent["groundClass"],
+        "groundClass": ground_class or parent["groundClass"],
         "declaredSize": f"{declared[0]}x{declared[1]}",
         "requestedSize": parent["requestedSize"],
         "deliveredSize": f"{delivered[0]}x{delivered[1]}",
@@ -340,6 +349,7 @@ def main(argv: list[str]) -> int:
                     declared=LOCKUP,
                     source=mark,
                     cropped=False,
+                    ground_class="scene",
                     steps=["composited by derive.py"],
                     note=(
                         "The mark composited into the left third of the generated "
