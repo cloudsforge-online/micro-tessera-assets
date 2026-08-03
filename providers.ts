@@ -45,6 +45,18 @@ export interface Provider {
   readonly label: string
   readonly vendor: string
   readonly adapter: AdapterKind
+  /**
+   * Which prompt dialect this set was generated in — `dialects.json`, read through `dialects.ts`.
+   *
+   * `adapter` says how a set was POSTED; this says what was posted. Two providers may share a
+   * deployment, a route, a key and a model and still be two different experiments, and
+   * `qwen-image-2512` / `qwen-image-2512-positive` are exactly that pair: identical in every wire
+   * fact, different in one field.
+   *
+   * Parity is enforced WITHIN a dialect and re-derived ACROSS dialects; see `dialects.ts`'s header
+   * for why that is stronger than the plain equality it replaces, rather than weaker.
+   */
+  readonly dialect: string
   /** Absolute. `assets/` and `MANIFEST.json` hang off this. */
   readonly root: string
   readonly status: ProviderStatus
@@ -99,6 +111,20 @@ export const REFERENCE: Provider = providerById(document.reference)
 
 /** Every provider that can actually be run against today. Never a hardcoded pair. */
 export const live = (): readonly Provider[] => PROVIDERS.filter((p) => p.status === 'live')
+
+/**
+ * The providers sharing one dialect — the group parity is asserted over.
+ *
+ * This is the seam that lets a second prompt dialect exist without weakening the guarantee the
+ * comparison rests on. Before there was one implicit group containing every provider; there are now
+ * N explicit ones, each holding the same property, and no code anywhere assumes a group has one
+ * member or that there is one group.
+ */
+export const inDialect = (dialect: string): readonly Provider[] =>
+  PROVIDERS.filter((p) => p.dialect === dialect)
+
+/** Every dialect at least one registered provider is actually generated in. */
+export const dialectsInUse = (): readonly string[] => [...new Set(PROVIDERS.map((p) => p.dialect))]
 
 export class ProviderWithdrawnError extends Error {
   constructor(provider: Provider) {

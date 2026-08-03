@@ -1,0 +1,256 @@
+{
+  "$comment": [
+    "PROMPT DIALECTS. A dialect is a named, deterministic, total function from the prompt on record",
+    "for an asset to the prompt a provider set is actually sent. Read by BOTH dialects.ts and",
+    "dialects.py, for the same reason providers.json is read by two loaders: one hand-copied",
+    "registry in this repository is already one too many, and two loaders reading one file cannot",
+    "drift.",
+    "",
+    "WHY THIS EXISTS. The comparison in COMPARISON.md is controlled: every provider replays the",
+    "reference set's recorded prompt byte for byte, so FLUX and Qwen answer the SAME question about",
+    "site/mark. That answers 'which model is better on identical input'. It does not answer 'which",
+    "model is better when each is prompted the way it wants', and after the run there was a reason",
+    "to think the two questions have different answers: Qwen does not truncate (COMPARISON.md's",
+    "PROMPT LENGTH probe), yet it disregards the prohibitions it demonstrably receives while",
+    "honouring the positives. This estate's briefs are prohibition-heavy — see the currency marks in",
+    "COMPARISON.md section 8 — so the house style may be close to the worst possible shape of brief",
+    "for it.",
+    "",
+    "WHAT A DIALECT DOES NOT WEAKEN. Parity is now enforced WITHIN a dialect exactly as it was",
+    "enforced across all sets before: every provider in a dialect is sent the byte-identical string",
+    "for a given asset, asserted by parity.test.ts and by verify.py --parity. Across dialects it is",
+    "enforced MORE strongly than plain equality was, because a dialect is a pure function of the",
+    "literal record: verify.py re-derives each candidate's recorded prompt by applying its dialect's",
+    "rules to the reference set's recorded prompt and fails if a single byte differs. So two sets in",
+    "different dialects are provably about the same asset and the same brief, and the whole of the",
+    "difference between them is attributable to the named rules below and to nothing else.",
+    "",
+    "It is therefore impossible to compare two sets generated from different prompts without that",
+    "being explicit: the dialect is on the provider entry, on every manifest entry, in the report",
+    "header, and compare.py refuses to print a single-question verdict over a cross-dialect",
+    "selection.",
+    "",
+    "THE RESIDUAL RULE, which is what makes 'positive' a fact rather than a claim. Every dialect",
+    "declares the vocabulary it forbids ITSELF. After the rules are applied, the result is scanned",
+    "for that vocabulary, and a prompt that still carries any of it CANNOT BE SENT — promptForProvider",
+    "throws. An asset only enters the positive set if the restatement genuinely cleared it. That is",
+    "why the rule list grows with the corpus rather than being written once and hoped over.",
+    "",
+    "The rules are ordered and applied in sequence, each replacing every occurrence. `regex` rules",
+    "use $1-style backreferences in `replace`; dialects.py translates those to Python's \\1 form, which",
+    "is the one adapter in the seam and is asserted by parity.test.ts against dialects.py's own output."
+  ],
+  "literal": "literal",
+  "negationVocabulary": [
+    "no",
+    "not",
+    "never",
+    "nothing",
+    "neither",
+    "nor",
+    "without",
+    "cannot",
+    "avoid",
+    "omit",
+    "exclude"
+  ],
+  "dialects": [
+    {
+      "id": "literal",
+      "label": "as recorded",
+      "source": null,
+      "checkResiduals": false,
+      "summary": [
+        "The estate's own prompt style, exactly as the reference set recorded it. The identity",
+        "transform: zero rules, and there must never be one. This is the dialect the controlled",
+        "FLUX-vs-Qwen comparison is conducted in, and the FLUX sets are permanent."
+      ],
+      "rules": []
+    },
+    {
+      "id": "positive",
+      "label": "prohibitions restated as positive assertions",
+      "source": "literal",
+      "checkResiduals": true,
+      "summary": [
+        "The same brief with every prohibition rewritten as an assertion about what IS in the frame.",
+        "The method, applied to every rule below:",
+        "",
+        "  * a forbidden RENDERING becomes a described one — 'no gradients, no bevels, no 3D' becomes",
+        "    a statement that each shape is one solid block of colour with the same value at its centre",
+        "    as at its rim, and that every edge is a hard boundary where one flat colour stops and the",
+        "    next begins;",
+        "  * a forbidden OBJECT becomes a statement about what occupies that space instead — 'no frame,",
+        "    no border, no bounding box, no construction lines' becomes 'the subject's outline is the",
+        "    only edge anywhere in the frame';",
+        "  * a forbidden GROUND becomes a measurement — 'not grey, not taupe, not a vignette, not",
+        "    lighter at the corners' becomes 'sample it at any point and it reads exactly #12100f';",
+        "  * a forbidden HUE becomes a coordinate — 'never olive, never teal' becomes the hue angle,",
+        "    computed from the accent hex itself.",
+        "",
+        "Nothing about the SUBJECT changes. The sentence naming what the mark depicts is carried",
+        "through untouched wherever it holds no prohibition, which is what keeps the two dialects two",
+        "phrasings of one brief rather than two briefs."
+      ],
+      "rules": [
+        {
+          "why": "the game-icon style paragraph's rendering prohibitions",
+          "find": "Flat fills only: no gradients, no photographic texture, no bevels, no drop shadows, no glow, no 3D, no photo-realism, no weathering.",
+          "replace": "Flat fills only: this is a vector graphic of the kind an SVG file holds. Every shape is one single solid block of colour, exactly the same value at its centre as at its rim, and every edge is a hard boundary where one flat colour stops and the next flat colour begins. The whole image lies on one plane and is built from pure areas of colour, in the register of a printed pictogram on a road sign."
+        },
+        {
+          "why": "the brand style paragraph's rendering prohibitions, which carry two extra terms",
+          "find": "Flat fills only: no gradients, no photographic texture, no bevels, no drop shadows, no glow, no 3D, no photo-realism, no weathering, no illustration. Confident and minimal, and legible at 16 pixels. No stock-logo cliches, no swooshes.",
+          "replace": "Flat fills only: this is a vector graphic of the kind an SVG file holds. Every shape is one single solid block of colour, exactly the same value at its centre as at its rim, and every edge is a hard boundary where one flat colour stops and the next flat colour begins. The whole image lies on one plane and is built from pure areas of colour, in the register of a printed pictogram on a road sign. Confident and minimal, and legible at 16 pixels. Every curve in it is an arc of a true circle and every straight is a straight, drawn at the one stroke weight."
+        },
+        {
+          "regex": true,
+          "why": "the brand style paragraph's single-hue clause",
+          "find": "with exactly one accent colour — (#[0-9a-fA-F]{6}) — and no second hue anywhere",
+          "replace": "with exactly one accent colour — $1 — which is the single hue present in the whole image"
+        },
+        {
+          "why": "the inset-duplicate hardening clause, which is four prohibitions in a row",
+          "find": "Draw the subject exactly ONCE, filling the frame. Do not repeat it, do not inset a second smaller copy, do not add a thumbnail, a preview box, a framed panel, a tile, a mirror, a variant or a sheet of alternates beside or below it.",
+          "replace": "Draw the subject exactly ONCE, filling the frame. The frame holds one instance of one subject at one size, and every pixel outside that one subject is bare background."
+        },
+        {
+          "why": "the game-icon lettering clause",
+          "find": "Nothing is written anywhere in this image: no text, no lettering, no numerals, no caption, no label, no title, no logo, no watermark and no signature. If any string would appear, leave that area empty instead.",
+          "replace": "This image is wordless and consists purely of shape. Every region of the frame is either part of the drawn subject or bare background, and wherever a caption, a label or a signature would sit there is bare background instead."
+        },
+        {
+          "why": "the brand lettering clause on a wordless kind",
+          "find": "No text, no lettering, no numerals, no currency symbols, no watermark.",
+          "replace": "This mark is wordless and consists purely of shape: every region of the frame is either part of the drawn mark or bare ash ground."
+        },
+        {
+          "why": "the ground-colour list, long form — the twelve things the field must not be",
+          "find": " — not grey, not taupe, not beige, not cream, not ivory, not off-white, not paper, not parchment, not a gradient, not a vignette, not a radial glow, not a spotlight, not a studio backdrop, and not lighter at the corners or behind the subject.",
+          "replace": ". Sample that field at any point — a corner, an edge, the centre, the area directly behind the subject — and it reads exactly #12100f every time: one constant value across the entire field, as though the finished subject had been pasted onto a solid #12100f rectangle."
+        },
+        {
+          "why": "the ground-colour list, short form",
+          "find": " — not grey, not taupe, not beige, not a gradient, not a vignette, not a studio backdrop, and not lighter at the corners or behind the subject.",
+          "replace": ". Sample that field at any point — a corner, an edge, the centre, the area directly behind the subject — and it reads exactly #12100f every time: one constant value across the entire field, as though the finished subject had been pasted onto a solid #12100f rectangle."
+        },
+        {
+          "why": "the ground-colour list, brand form",
+          "find": " — not grey, not taupe, not beige, and not lighter at the corners.",
+          "replace": ". Sample that field at any point — a corner, an edge, the centre, the area directly behind the mark — and it reads exactly #12100f every time: one constant value across the entire field, as though the finished mark had been pasted onto a solid #12100f rectangle."
+        },
+        {
+          "why": "the polarity clause, long form",
+          "find": "The subject is bright against a dark ground, never dark against a light one, and the image is never inverted.",
+          "replace": "The subject is the bright thing in the frame and the field behind it is the dark thing: light subject on dark field, in that order."
+        },
+        {
+          "why": "the polarity clause, short form",
+          "find": "The subject is bright against a dark ground, never dark against a light one.",
+          "replace": "The subject is the bright thing in the frame and the field behind it is the dark thing: light subject on dark field, in that order."
+        },
+        {
+          "why": "the polarity clause, brand form",
+          "find": "The artwork is bright against a dark ground, never dark against a light one.",
+          "replace": "The artwork is the bright thing in the frame and the field behind it is the dark thing: light artwork on dark field, in that order."
+        },
+        {
+          "why": "the plinth clause — the one the bevelled currency-ember stone plinth defeated",
+          "find": "It is not standing on anything: no floor, no ground plane, no platform, no pedestal, no podium, no horizon line, no cast shadow and no contact shadow.",
+          "replace": "The subject floats free: the #12100f field continues unbroken beneath it and on all four sides of it, right up to its outline, so the last pixel outside its edge is #12100f and the first pixel inside it is the accent."
+        },
+        {
+          "why": "the construction-guide clause — the one the drawn lattice on currency-spark defeated",
+          "find": "Draw only the subject itself: no construction lines, no grid, no guides, no ruled margins, no border, no frame, no bounding box, no registration marks, no colour swatches and no drop shadow.",
+          "replace": "Draw only the finished subject: the subject and the flat field are the whole of the image, and the subject's own outline is the only edge anywhere in the frame."
+        },
+        {
+          "why": "the construction-guide clause, brand form",
+          "find": "Draw only the finished mark: no construction lines, no grid, no guides, no ruled margins, no border, no frame, no bounding box, no registration marks, no drop shadow.",
+          "replace": "Draw only the finished mark: the mark and the flat field are the whole of the image, and the mark's own outline is the only edge anywhere in the frame."
+        },
+        {
+          "why": "the DARK restatement the game sets append last",
+          "find": "Overall this image is DARK. The background is ONE SINGLE FLAT COLOUR, near-black #12100f, with no shading, no lighting, no shadow, no floor and no texture of any kind on it anywhere. It is NOT white, NOT cream and NOT grey. The artwork floats free on it with nothing beneath it, and is the only bright thing in the frame.",
+          "replace": "Overall this image is DARK. The background is ONE SINGLE FLAT COLOUR, near-black #12100f, and it carries that one value everywhere: every background pixel in the file holds the identical RGB triple, a plain unlit surface of perfectly even tone. The artwork floats free on it and is the only bright thing in the frame."
+        },
+        {
+          "regex": true,
+          "why": "the accent clause's closing prohibition",
+          "find": "Nothing is drawn in plain white, plain grey or the ground colour, and (#[0-9a-fA-F]{6}) is the dominant colour",
+          "replace": "Every pixel belonging to the artwork carries either $1 or the bone, and $1 is the dominant colour"
+        },
+        {
+          "why": "aetherholm's single-colour clause, which forbids the ground line the other sets allow",
+          "find": "There is no second colour anywhere: no ground line, no baseline bar, no shelf, no band and no stripe beneath or behind the subject.",
+          "replace": "That accent is the single colour present in the whole image: the subject is drawn in it, and every other region of the frame is bare #12100f field — the area beneath the subject and the area behind it included."
+        },
+        {
+          "why": "aether's hue, restated as its measured coordinate: #8f7ae8 is hue 251 at 71% saturation",
+          "find": " — clearly and obviously PURPLE at a glance, a glowing lavender-violet — never black, never navy, never grey.",
+          "replace": " — clearly and obviously PURPLE at a glance, a glowing lavender-violet sitting at 251 degrees on the hue wheel at 71 percent saturation and 69 percent lightness."
+        },
+        {
+          "why": "cloudstone's hue: #c9b891 is hue 42 at 34% saturation",
+          "find": " — a limestone cream leaning gold, never white and never grey.",
+          "replace": " — a limestone cream leaning gold, sitting at 42 degrees on the hue wheel at 34 percent saturation and 68 percent lightness."
+        },
+        {
+          "why": "provisions' hue: #8fbf4f is hue 86 at 47% saturation",
+          "find": " — a bright yellow-leaning leaf green, never olive and never teal.",
+          "replace": " — a bright yellow-leaning leaf green, sitting at 86 degrees on the hue wheel at 47 percent saturation and 53 percent lightness."
+        },
+        {
+          "why": "skysteel's hue: #7fa3c0 is hue 207 at 34% saturation",
+          "find": " — a muted blue, clearly blue rather than grey.",
+          "replace": " — a muted blue, sitting at 207 degrees on the hue wheel at 34 percent saturation and 63 percent lightness."
+        },
+        {
+          "why": "verdant's hue: #5fce7a is hue 135 at 53% saturation",
+          "find": "the green of a jade stone or of a green traffic light, never olive, khaki, sage, moss or yellow-green.",
+          "replace": "the green of a jade stone or of a green traffic light, sitting at 135 degrees on the hue wheel at 53 percent saturation and 59 percent lightness."
+        },
+        {
+          "why": "the icon-not-illustration clause, long form",
+          "find": "This is an icon, not an illustration: no scene, no creature, no background, no detail that dies when it is shrunk.",
+          "replace": "This is an icon: one subject drawn as a symbol, given the whole of the frame, with every feature in it large enough to survive being shrunk to 24 pixels."
+        },
+        {
+          "why": "the icon-not-illustration clause, aetherholm form",
+          "find": "This is an icon, not an illustration: no scene, no background, no detail that dies when it is shrunk.",
+          "replace": "This is an icon: one subject drawn as a symbol, given the whole of the frame, with every feature in it large enough to survive being shrunk to 24 pixels."
+        },
+        {
+          "why": "currency-ember's enclosure sentence",
+          "find": "Nothing else sits inside the circle.",
+          "replace": "The circle's interior holds that one flame and bare ash ground."
+        },
+        {
+          "why": "currency-ember's ridge sentence, whose 'rather than sitting in a frame' is a prohibition",
+          "find": "Below the circle, clear of it and not touching it, the ash ridge is one short flat bar, so the coin reads as standing on ground rather than sitting in a frame.",
+          "replace": "Below the circle, separated from it by a clear gap of bare ash ground, the ash ridge is one short flat bar, so the coin reads as standing on ground."
+        },
+        {
+          "why": "currency-spark's no-enclosure sentence — the mark Qwen answered with a plinth and a lattice",
+          "find": "standing alone with no circle, no disc, no ring and no enclosure of any kind around it.",
+          "replace": "standing alone in open ground, with bare ash field on every side of it out to the frame edge."
+        },
+        {
+          "why": "currency-spark's shape prohibitions",
+          "find": "Not a burst, not a star, not a cross, no radiating rays.",
+          "replace": "Every stroke in it rises straight up from the baseline, parallel to the others."
+        },
+        {
+          "why": "aether's clearance sentence, whose 'not touching it' is a prohibition",
+          "find": "floating just above an open ring, not touching it.",
+          "replace": "floating just above an open ring, separated from it by a clear gap of bare ash field."
+        },
+        {
+          "why": "tide's spray prohibition",
+          "find": "with no spray and no droplets.",
+          "replace": "its outline closed and continuous as one unbroken shape."
+        }
+      ]
+    }
+  ]
+}

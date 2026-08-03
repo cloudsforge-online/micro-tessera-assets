@@ -26,6 +26,12 @@ class Provider:
     label: str
     vendor: str
     adapter: str
+    #: Which prompt dialect this set was generated in; the rules are in dialects.json and the
+    #: transform is dialects.py. `adapter` says how a set was POSTED, this says what was posted.
+    #: Two providers can share a deployment, a route, a key and a model and still be two different
+    #: experiments — qwen-image-2512 and qwen-image-2512-positive are exactly that pair. Parity is
+    #: enforced WITHIN a dialect and RE-DERIVED across dialects; see verify.py's check_parity.
+    dialect: str
     #: Repository-relative root. "." for the reference provider; see providers.json's header.
     root: Path
     #: "live" or "withdrawn". A withdrawn provider's deployment no longer exists; its entry is kept
@@ -86,6 +92,10 @@ def load() -> list[Provider]:
                 label=raw["label"],
                 vendor=raw["vendor"],
                 adapter=raw["adapter"],
+                # No default. A provider with no declared dialect is a set nobody can say what was
+                # sent to, and defaulting it to "literal" would silently claim a set is part of the
+                # controlled comparison when the person who added it never said so.
+                dialect=raw["dialect"],
                 root=(HERE / raw["root"]).resolve(),
                 status=raw.get("status", "live"),
                 shipped=bool(raw["shipped"]),
@@ -115,6 +125,16 @@ def by_id(provider_id: str) -> Provider:
 def live() -> list[Provider]:
     """Every provider that can be run against today. Never a hardcoded pair."""
     return [p for p in load() if p.status == "live"]
+
+
+def in_dialect(dialect: str) -> list[Provider]:
+    """The providers sharing one prompt dialect — the group prompt parity is asserted over.
+
+    Before there was one implicit group holding every provider. There are now N explicit ones, each
+    holding the same property, and nothing here assumes a group has one member or that there is one
+    group.
+    """
+    return [p for p in load() if p.dialect == dialect]
 
 
 def present() -> list[Provider]:
@@ -150,7 +170,8 @@ if __name__ == "__main__":
         shipped = "shipped" if provider.shipped else "candidate"
         adapter = "implemented" if provider.implemented else "STUB"
         print(
-            f"{provider.id:<18} {provider.status:<10} {shipped:<9} {adapter:<11} {state:<13} "
+            f"{provider.id:<26} {provider.dialect:<9} {provider.status:<10} {shipped:<9} "
+            f"{adapter:<11} {state:<13} "
             f"{provider.root.relative_to(HERE) if provider.root != HERE else '.'}"
         )
     sys.exit(0)
