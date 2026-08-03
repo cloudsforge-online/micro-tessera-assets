@@ -39,7 +39,7 @@ Both sets here have to be post-processed identically or COMPARISON.md §7.2's cl
 spread is finally like-for-like would simply be false.
 
     python3 normalise_ground.py            # every flat asset in every set present on disk
-    python3 normalise_ground.py --provider qwen-image-2512
+    python3 normalise_ground.py --provider flux-2-pro
     python3 normalise_ground.py --force    # re-run over assets already normalised
     python3 normalise_ground.py --dry-run  # report the delivered grounds, change nothing
 """
@@ -381,7 +381,11 @@ def _normalise_one(provider, force: bool, dry_run: bool) -> int:
         entry["postProcessing"] = steps
 
     if not dry_run:
-        MANIFEST.write_text(json.dumps(document, indent=2) + "\n")
+        # `ensure_ascii=False`, to match generate.ts's JSON.stringify. Without it this tool
+        # re-escapes every non-ASCII character generate.ts wrote raw, so MANIFEST.json
+        # oscillates between two byte-different encodings of identical data depending on
+        # which tool touched it last, and every run shows a diff nobody made.
+        MANIFEST.write_text(json.dumps(document, indent=2, ensure_ascii=False) + "\n")
 
     # The evidence that the step was needed at all: what FLUX actually delivered, and how far
     # apart the delivered grounds were from each other. One number is a curiosity; a RANGE is the

@@ -11,12 +11,21 @@
  * varies — the envelope a prompt is posted inside — is named and isolated here, and everything
  * that must NOT vary stays outside it.
  *
- * **N, not three, and not two.** The comparison was briefed as three-way, is two-way today because
- * Cosmos 3 Super failed to come up on A100_80GB and was deleted, and will be three-way again: the
- * estate has a stated 3D and animation gap FLUX cannot fill
- * (docs/ecosystem/19-new-products.md:97). Nothing in this file, in providers.json, in the manifest
- * schema or in compare.py counts providers. A withdrawn one keeps its entry, because the wire
- * facts in it were measured and are cheaper to re-read than to re-establish.
+ * **N, not three, and not one.** The comparison was briefed as three-way, ran two-way because
+ * Cosmos 3 Super failed to come up on A100_80GB and was deleted, and is one-way today because the
+ * owner has withdrawn Qwen-Image 2512 from the estate: FLUX 2 Pro is the shipped set and the
+ * challenger's images, manifest and registry entry are gone. COMPARISON.md keeps what that
+ * comparison MEASURED, which is the part that was worth having.
+ *
+ * **The seam stays.** One live provider is a fact about today, not a shape for the code. The
+ * estate has a stated 3D and animation gap FLUX cannot fill (docs/ecosystem/19-new-products.md:97),
+ * so a next challenger is a question of when rather than if, and reinstating this interface,
+ * `providers.json`'s N-provider registry, `replay.ts`'s prompt record and `verify.py`'s parity and
+ * delivered-size checks would be a rewrite rather than an edit. What was deleted with Qwen is only
+ * what could not outlive it: its envelope, and the transposed-`size` workaround for its bug.
+ * Nothing in this file, in providers.json, in the manifest schema or in compare.py counts
+ * providers. A withdrawn one keeps its entry, because the wire facts in it were measured and are
+ * cheaper to re-read than to re-establish.
  *
  * ## What must not vary, and how this file guarantees it
  *
@@ -30,14 +39,14 @@
  * ## How much of the Managed Compute backend is real
  *
  * Route, auth header, deployment naming, warming detection and error classification are written
- * and tested — they were measured against the live Qwen deployment. The REQUEST BODY is not, and
- * `bodyFor` throws.
+ * and tested — they were measured against a live deployment on this host. The REQUEST BODY is
+ * not, and `bodyFor` throws.
  *
  * That line is where it is on purpose. A Managed Compute endpoint's request schema is the model's
  * own signature, not a standard, and there is no swagger on this host to read. Shipping a
  * plausible body that returns 200 with a differently-interpreted prompt would not look like a
- * failure; it would look like "Qwen is worse at prompt adherence", which is exactly the conclusion
- * this exercise is meant to reach honestly or not at all. So `UNKNOWNS` is a checklist rather than
+ * failure; it would look like "the challenger is worse at prompt adherence", which is exactly the
+ * conclusion this exercise is meant to reach honestly or not at all. So `UNKNOWNS` is a list rather
  * a lament, `probe.ts` asks the server to fill in the first item, and `generate` calls `bodyFor`
  * before it opens a socket so an unknown body costs nothing — which on a per-hour deployment means
  * not even a billable second.
@@ -117,8 +126,14 @@ export const measureC2pa = (bytes: Buffer): boolean => bytes.includes(C2PA_MARKE
 
 /**
  * ══════════════════════════════════════════════════════════════════════════════════════════════
- * **THE MEASURED CONTRACT, so far.** Established by probing the live Qwen deployment, not read off
- * a model card. Two of these contradict what the reference provider does.
+ * **THE MEASURED CONTRACT, so far.** Established by probing live deployments on this host, not
+ * read off a model card. Two of these contradict what the reference provider does.
+ *
+ * These are facts about the HOST, not about either model that was on it, which is why they are
+ * kept now that the Qwen deployment has been removed from the estate: the next Managed Compute
+ * challenger lands on the same routes, the same header and the same warming sequence, and every
+ * line below cost a real request to learn. Where an observation names `qwen--qwen-image-2512` it
+ * is a measurement that was taken, reported as taken; that deployment no longer exists.
  *
  *     POST {FOUNDRY2_BASE_URL}/managed-deployments/{deployment}/v1/chat/completions
  *     api-key: <FOUNDRY2_API_KEY>
@@ -225,7 +240,8 @@ export const UNKNOWNS: readonly string[] = [
     'must be left EMPTY: the reference prompts carry their prohibitions inside the prompt text, ' +
     'and moving them into a different field would give this model a different instruction from the ' +
     'other two. That is a parity decision, not a quality one.',
-  'PROMPT LENGTH — ANSWERED, and the answer rules out the obvious explanation. Qwen does NOT ' +
+  'PROMPT LENGTH — ANSWERED on the deployment that has since been removed, and the answer ruled ' +
+    'out the obvious explanation. That model did NOT ' +
     'truncate. Probed with a 2,238-character prompt whose FINAL clause was "the entire background ' +
     'is solid pure green, hex #00ff00, edge to edge": the image came back green. So the late ' +
     'clauses of a 2,000-character brand prompt are received and acted on.\n\n    That matters ' +
@@ -439,231 +455,6 @@ export function managedComputeBackend(
 }
 
 
-/* ------------------------------------------------------------------ foundry openai-images */
-
-/**
- * ══════════════════════════════════════════════════════════════════════════════════════════════
- * **THE MEASURED CONTRACT for Qwen-Image 2512.** Every line re-verified against the live endpoint,
- * and the last of them was found by doing that rather than trusting the handover.
- *
- *     POST {FOUNDRY3_BASE_URL}/openai/v1/images/generations
- *     api-key: <FOUNDRY3_API_KEY>                       (Bearer is 401)
- *     {"model":"qwen--qwen-image-2512","prompt":"…","response_format":"b64_json","n":1,"size":"HxW"}
- *
- *     200 {background:null, created, data:[{b64_json}], output_format:"png",
- *          quality:null, size:"1024x1024", usage:null}
- *
- * 1. **Not `/managed-deployments/…`.** That route is real, on a different host, and is what this
- *    file's earlier stub was written against. This is an OpenAI-shaped images route instead.
- * 2. **`response_format` is required and must be `b64_json`.** The OpenAI default, `url`, is a
- *    400: "`response_format='url'` is not supported". That error comes from the model itself.
- * 3. **`width`/`height` are rejected** — `unrecognized_request_argument`. The reference provider
- *    takes exactly those and ignores `size`; this one is the mirror image.
- * 4. **`size` IS TRANSPOSED, and it lies about it.** Asking for `1024x384` returns a **384x1024**
- *    image while the response still reports `size: "1024x384"`. Verified in both directions across
- *    four aspect ratios:
- *
- *        asked 1024x384 → 384x1024      asked 1280x640 → 640x1280
- *        asked 384x1024 → 1024x384      asked 640x1280 → 1280x640
- *
- *    **A square probe cannot see this**, which is exactly why it survived a careful handover: the
- *    one image generated to establish the contract was 1024x1024. Every non-square asset in this
- *    estate — wordmarks, OG cards, social banners, key art — would have come back rotated, and the
- *    only thing that would have caught it downstream is `verify.py`'s dimensions check, after the
- *    whole set was paid for.
- *
- *    `bodyFor` therefore sends `height x width`. That is a correction in the ENVELOPE. It touches
- *    nothing about the prompt, which is what `parity.test.ts` protects.
- * 5. **Exact sizes are honoured** — no flooring to a multiple of 16, unlike the reference. The
- *    round-up in `requestSizeFor` is kept anyway, so a candidate produces the same declared sizes
- *    as the reference and the two sets stay comparable asset for asset.
- * 6. **No cost signal.** `background`, `quality` and `usage` all return null, so there is no
- *    per-image number and `providerCostUnits` stays null. That null is load-bearing: this
- *    deployment bills per hour of existence and inventing a per-image figure would be a lie.
- * ══════════════════════════════════════════════════════════════════════════════════════════════
- */
-
-/** Required, and the only accepted value. See trap 2. */
-export const RESPONSE_FORMAT = 'b64_json'
-
-/**
- * The size string to send in order to receive `width x height`.
- *
- * Transposed deliberately. See trap 4 — this is a bug at the far end that is invisible on square
- * assets, and it is corrected here rather than by post-rotating the delivered bytes, because
- * rotating a generated image is a second lossy operation on artwork the model composed for the
- * frame it thought it had.
- */
-export const sizeParamFor = (width: number, height: number): string => `${height}x${width}`
-
-export function openAiImagesBody(
-  deployment: string,
-  request: GenerationRequest,
-): Record<string, unknown> {
-  return {
-    model: deployment,
-    // Verbatim. The one field the whole comparison depends on.
-    prompt: request.prompt,
-    response_format: RESPONSE_FORMAT,
-    n: 1,
-    size: sizeParamFor(request.requestWidth, request.requestHeight),
-  }
-}
-
-interface OpenAiImagesResponse {
-  readonly data?: ReadonlyArray<{ readonly b64_json?: unknown }>
-  readonly size?: unknown
-  readonly output_format?: unknown
-  readonly usage?: unknown
-}
-
-/**
- * Qwen-Image 2512 on Azure AI Foundry, over the OpenAI images route.
- *
- * Retries transport faults and 5xx, and waits out a warming container without spending the asset's
- * retry budget on it. A 400 is not retried: it is the request being wrong, and it is wrong the same
- * way every time.
- */
-export function openAiImagesBackend(
-  provider: Provider,
-  config: ManagedComputeConfig,
-  deps: {
-    readonly fetch?: typeof globalThis.fetch
-    readonly log?: (m: string) => void
-    /** Ceiling on ONE attempt. See `attemptSignal` below for why this is not the caller's. */
-    readonly deadlineMs?: number
-  } = {},
-): ProviderBackend {
-  const fetchImpl = deps.fetch ?? globalThis.fetch
-  const log = deps.log ?? ((message: string) => process.stdout.write(`${message}\n`))
-  const deadlineMs = deps.deadlineMs ?? 120_000
-  const url = scoringUri(config)
-
-  /**
-   * The caller's cancellation AND this attempt's own deadline — both, never just the caller's.
-   *
-   * The first version passed the caller's signal straight through. `generateOne` hands it an
-   * `AbortSignal.timeout(300_000)` covering the WHOLE asset, so one hung request would burn the
-   * entire budget and then every retry would abort instantly against an already-fired signal: the
-   * retry loop would look like it ran and would in fact have made no second request. Found by
-   * watching a set sit still for five minutes and asking why, rather than by a test — a real
-   * hang is the only thing that shows it.
-   */
-  const attemptSignal = (outer: AbortSignal): AbortSignal =>
-    AbortSignal.any([outer, AbortSignal.timeout(deadlineMs)])
-
-  return {
-    provider,
-    bodyFor: (request) => openAiImagesBody(config.deployment, request),
-
-    async generate(request, signal) {
-      const body = openAiImagesBody(config.deployment, request)
-      const attempts: Attempt[] = []
-      const MAX = 3
-
-      for (let go = 0; go <= MAX; go += 1) {
-        const startedAt = Date.now()
-        const record = (outcome: AttemptOutcome, status: number | null, detail: string): void => {
-          attempts.push({
-            backend: 'flux',
-            model: config.deployment,
-            outcome,
-            status,
-            detail: redact(detail),
-            durationMs: Date.now() - startedAt,
-          })
-        }
-
-        let response: Response
-        try {
-          response = await fetchImpl(url, {
-            method: 'POST',
-            headers: managedHeaders(config),
-            body: JSON.stringify(body),
-            signal: attemptSignal(signal),
-          })
-        } catch (err) {
-          record('transport_error', null, err instanceof Error ? err.message : String(err))
-          if (go === MAX) break
-          await new Promise((r) => setTimeout(r, 2_000 * 2 ** go))
-          continue
-        }
-
-        if (!response.ok) {
-          const text = (await response.text().catch(() => '')).slice(0, 2_000)
-          if (isWarming(response.status, text)) {
-            // The deployment, not the request. Does not count as an attempt against the asset, and
-            // every worker shares one poll rather than each hammering a loading container.
-            await awaitWarm(async () => {
-              const again = await fetchImpl(url, {
-                method: 'POST',
-                headers: managedHeaders(config),
-                body: JSON.stringify(body),
-                signal: attemptSignal(signal),
-              })
-              return !isWarming(again.status, (await again.text().catch(() => '')).slice(0, 2_000))
-            }, log)
-            go -= 1
-            continue
-          }
-          if (response.status === 401 || response.status === 403) {
-            record('unauthorised', response.status, text)
-            throw new ImageBackendError('unauthorised', 'the endpoint refused the key', attempts)
-          }
-          if (response.status < 500) {
-            // Wrong the same way on every retry — a refusal, or a body this endpoint will not take.
-            record('bad_request', response.status, text)
-            throw new ImageBackendError('bad_request', `the request was refused: ${redact(text)}`, attempts)
-          }
-          record('server_error', response.status, text)
-          if (go === MAX) break
-          await new Promise((r) => setTimeout(r, 2_000 * 2 ** go))
-          continue
-        }
-
-        let parsed: OpenAiImagesResponse
-        try {
-          parsed = (await response.json()) as OpenAiImagesResponse
-        } catch (err) {
-          record('bad_response', 200, err instanceof Error ? err.message : String(err))
-          if (go === MAX) break
-          continue
-        }
-
-        const encoded = parsed.data?.[0]?.b64_json
-        if (typeof encoded !== 'string' || encoded.length === 0) {
-          record('bad_response', 200, 'the endpoint returned no b64_json payload')
-          if (go === MAX) break
-          continue
-        }
-
-        const bytes = Buffer.from(encoded, 'base64')
-        record('ok', 200, 'b64_json')
-        return {
-          bytes,
-          backend: provider.id,
-          model: config.deployment,
-          // Measured on the bytes, never asserted. Observed false on this provider, which is a
-          // disclosure fact worth having rather than a disappointment to hide.
-          c2pa: measureC2pa(bytes),
-          // Null on purpose: `usage` comes back null, so there is no per-image figure and one must
-          // not be invented. This provider bills per deployment-hour.
-          providerCostUnits: null,
-          providerOutputMegapixels: null,
-          seed: null,
-          attempts,
-        }
-      }
-
-      throw new ImageBackendError(
-        'backend_unavailable',
-        `every attempt failed (${attempts.map((a) => `${a.outcome}${a.status ? ` ${a.status}` : ''}`).join(', ')})`,
-        attempts,
-      )
-    },
-  }
-}
-
 /* ------------------------------------------------------------------ the reference backend */
 
 /**
@@ -727,20 +518,6 @@ export function backendFor(provider: Provider, env: NodeJS.ProcessEnv = process.
 
   const endpoint = read(provider.env['endpoint']).replace(/\/+$/, '')
   const apiKey = read(provider.env['apiKey'])
-
-  if (provider.adapter === 'foundry-openai-images') {
-    if (!endpoint || !apiKey) {
-      throw new Error(
-        `${provider.env['endpoint']} and ${provider.env['apiKey']} must be set in studio/.env.local`,
-      )
-    }
-    return openAiImagesBackend(provider, {
-      baseUrl: endpoint,
-      apiKey,
-      deployment: provider.deployment ?? '',
-      route: provider.route ?? '/openai/v1/images/generations',
-    })
-  }
 
   if (provider.adapter === 'foundry-managed-compute') {
     // A missing credential yields a backend with no config rather than an exception, so that the

@@ -3,8 +3,7 @@
 
     python3 materialise.py --list
     python3 materialise.py --provider flux-2-pro       --into ../network-site/public --only network
-    python3 materialise.py --provider qwen-image-2512  --into ../network-site/public --only network
-    python3 materialise.py --provider qwen-image-2512  --into /tmp/x --dry-run
+    python3 materialise.py --provider flux-2-pro       --into /tmp/x --dry-run
 
 ═══════════════════════════════════════════════════════════════════════════════════════════════
 ## THE PROBLEM

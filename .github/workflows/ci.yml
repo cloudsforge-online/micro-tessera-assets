@@ -34,6 +34,13 @@ jobs:
           python-version: '3.12'
       # Pillow is the only dependency, and only for decoding pixels.
       - run: python3 -m pip install --disable-pip-version-check --quiet pillow
+      # BEFORE the run, not after, and it needs no images. Checks 9 and 10 compare sets to each
+      # other and there is one set on disk since the Qwen challenger was withdrawn, so both are
+      # dormant — they return clean because they were handed one document. `--self-test` hands
+      # them a two-set fixture with a deliberately broken asset and fails if either stays green,
+      # which is the difference between "nothing is wrong" and "nothing is looking".
+      - name: the cross-set guards still fail when broken
+        run: python3 verify.py --self-test
       - run: python3 verify.py
       # Every file in assets/ must be accounted for by the manifest — the emberkin-assets gap
       # (files on disk with no provenance entry) run in the other direction to verify.py's

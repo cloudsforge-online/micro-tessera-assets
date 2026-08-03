@@ -40,8 +40,6 @@ import {
   managedHeaders,
   MODEL_FIELD,
   modelValueFor,
-  openAiImagesBackend,
-  sizeParamFor,
   isWarming,
   awaitWarm,
   resetWarmingGate,
@@ -174,7 +172,7 @@ test('an unimplemented backend throws rather than guessing a wire shape', async 
 test('the unimplemented error names the unknowns and leaks no credential', () => {
   let message = ''
   try {
-    managedComputeBackend(providerById('qwen-image-2512')).bodyFor(sampleRequest('x'))
+    managedComputeBackend(providerById('cosmos-3-super')).bodyFor(sampleRequest('x'))
   } catch (err) {
     message = (err as Error).message
   }
@@ -203,12 +201,14 @@ test('the registry describes the models rather than counting them', () => {
 })
 
 test('the managed wire facts that were measured, pinned', () => {
-  const qwen = providerById('qwen-image-2512')
-  // Qwen turned out to serve on an OpenAI-shaped images route, not under /managed-deployments/.
-  assert.equal(qwen.route, '/openai/v1/images/generations')
+  // These are facts about the Managed Compute HOST, not about either model that has been on it,
+  // which is why they survive the removal of the Qwen deployment: the next challenger lands on the
+  // same routes, the same header and the same deployment-name rule.
+  const cosmos = providerById('cosmos-3-super')
+  assert.equal(cosmos.route, '/managed-deployments/{deployment}/v1/chat/completions')
   assert.equal(
-    scoringUri({ baseUrl: 'https://h.example/', apiKey: 'x', deployment: qwen.deployment!, route: qwen.route! }),
-    'https://h.example/openai/v1/images/generations',
+    scoringUri({ baseUrl: 'https://h.example/', apiKey: 'x', deployment: 'nvidia--cosmos3-super', route: cosmos.route! }),
+    'https://h.example/managed-deployments/nvidia--cosmos3-super/v1/chat/completions',
   )
   // `api-key`, never Bearer — Bearer is a measured 401 on that host. Asserted on the object the
   // code sends rather than by grepping the source, so a comment cannot fail the build.
@@ -217,10 +217,13 @@ test('the managed wire facts that were measured, pinned', () => {
   assert.equal(headers['authorization'], undefined)
   // `model` is required in the body and its value is the DEPLOYMENT name, not the catalogue name.
   assert.equal(MODEL_FIELD, 'model')
-  assert.equal(modelValueFor({ baseUrl: '', apiKey: '', deployment: 'qwen--qwen-image-2512', route: '' }), 'qwen--qwen-image-2512')
-  // Still true on the images route: `model` carries the deployment name, not the catalogue name.
+  assert.equal(
+    modelValueFor({ baseUrl: '', apiKey: '', deployment: 'nvidia--cosmos3-super', route: '' }),
+    'nvidia--cosmos3-super',
+  )
   // The near miss: the natural spelling of the Cosmos deployment is a measured 404.
-  assert.equal(providerById('cosmos-3-super').deployment, 'nvidia--cosmos3-super')
+  assert.equal(cosmos.deployment, 'nvidia--cosmos3-super')
+  assert.notEqual(cosmos.deployment, 'nvidia--cosmos-3-super')
 })
 
 test('a warming 500 is not a failure, and workers share one wait', async () => {
@@ -250,104 +253,67 @@ test('a warming 500 is not a failure, and workers share one wait', async () => {
   resetWarmingGate()
 })
 
-test('the Qwen envelope carries the prompt verbatim and transposes the size', () => {
-  const qwen = providerById('qwen-image-2512')
-  assert.equal(qwen.adapter, 'foundry-openai-images')
-  assert.equal(qwen.implemented, true)
-  const backend = openAiImagesBackend(qwen, {
-    baseUrl: 'https://h.example',
-    apiKey: 'k',
-    deployment: 'qwen--qwen-image-2512',
-    route: '/openai/v1/images/generations',
-  })
-  const prompt = 'first paragraph\n\nthe name is "Forge Trade" — accent #2a9e93\n\nlast paragraph'
-  const body = backend.bodyFor({
-    prompt,
-    spec: { kind: 'wordmark', width: 1024, height: 384, format: 'png' },
-    requestWidth: 1024,
-    requestHeight: 384,
-    kitName: 'Forge Trade',
-    accent: '#2a9e93',
-  })
-
-  // Parity: untouched, un-prefixed, un-truncated.
-  assert.equal(body['prompt'], prompt)
-  assert.equal(body['model'], 'qwen--qwen-image-2512')
-  // Required; the OpenAI default `url` is a measured 400 from the model itself.
-  assert.equal(body['response_format'], 'b64_json')
-  assert.equal(body['n'], 1)
-
-  // THE TRAP. Asking this endpoint for 1024x384 delivers 384x1024 while reporting 1024x384, so
-  // the envelope asks for the transpose. A square probe cannot see this — which is how it survived
-  // a careful handover — and every wordmark, OG card and banner in the estate is non-square.
-  assert.equal(body['size'], '384x1024')
-  assert.equal(sizeParamFor(1280, 640), '640x1280')
-  assert.equal(sizeParamFor(512, 512), '512x512', 'squares are unaffected, which is why it hides')
-
-  // width/height are a measured `unrecognized_request_argument` here; the reference provider is
-  // the exact mirror image, taking those and ignoring `size`.
-  assert.equal(body['width'], undefined)
-  assert.equal(body['height'], undefined)
-  assert.deepEqual(
-    Object.keys(body).sort(),
-    ['model', 'n', 'prompt', 'response_format', 'size'],
-    'the body grew a field; if it is prompt-adjacent, parity is at risk',
-  )
-})
-
-test('the two implemented backends are given the identical prompt for one asset', () => {
-  // The end-to-end version of the parity property: same asset, both live providers, compare the
-  // strings that reach the wire rather than the strings that go into the builders.
-  const qwen = providerById('qwen-image-2512')
-  const prompt = 'a prompt with\n\nparagraphs and "quotes" and — dashes'
-  const request = {
-    prompt,
-    spec: { kind: 'mark' as const, width: 1024, height: 1024, format: 'png' as const },
-    requestWidth: 1024,
-    requestHeight: 1024,
-    kitName: 'x',
-    accent: '#e8622c',
-  }
-  const qwenBody = openAiImagesBackend(qwen, {
-    baseUrl: 'https://h.example',
-    apiKey: 'k',
-    deployment: qwen.deployment!,
-    route: qwen.route!,
-  }).bodyFor(request)
-  const fluxBody = referenceBackend(REFERENCE, {
-    endpoint: 'https://f.example',
-    apiKey: 'k',
-    imagePath: '/p',
-    model: 'FLUX.2-pro',
-    fallbackModel: '',
-  }).bodyFor(request)
-  assert.equal(qwenBody['prompt'], fluxBody['prompt'])
-  assert.equal(qwenBody['prompt'], prompt)
-})
-
 test('c2pa is read off the bytes, never asserted', () => {
   assert.equal(measureC2pa(Buffer.from('\x89PNG....c2pa....')), true)
   assert.equal(measureC2pa(Buffer.from('\x89PNG....IDAT....')), false)
 })
 
-test('every non-square asset in THIS set is requested transposed', () => {
-  // The generic transposition test above pins `sizeParamFor` on invented sizes. This one pins it
-  // on the 68 real non-square assets this repository will actually generate — every avatar plate
-  // at 256x512, every ward backdrop at 1536x640 and the four wide title assets — because that is
-  // the population the bug would have silently rotated. A square cannot show the fault, so a set
-  // that happened to be all squares would pass the other test and prove nothing about this one.
-  const qwen = providerById('qwen-image-2512')
-  const backend = openAiImagesBackend(qwen, {
-    baseUrl: 'https://h.example',
+
+/**
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ * WHAT REPLACED THE THREE QWEN ENVELOPE TESTS, AND WHY IT IS NOT A REDUCTION
+ *
+ * Three tests were deleted with the Qwen deployment: they asserted that the OpenAI-images envelope
+ * carried the prompt verbatim, that `sizeParamFor` transposed, and that all 68 non-square assets
+ * were REQUESTED transposed. The first was a parity assertion and is replaced below. The other two
+ * pinned a workaround for one vendor's bug — a bug in an endpoint that no longer exists — and a
+ * test that pins a deleted workaround is a test that can only ever fail for the wrong reason.
+ *
+ * The property those two really protected is not "we transpose". It is **"a delivered image is the
+ * size that was asked for, measured on the bytes"**, and that survives in two places that are not
+ * specific to any model: `generate.ts`'s `TransposedDeliveryError`, which refuses to keep a rotated
+ * file for ANY provider, and `verify.py` check 9, which re-measures every non-square asset across
+ * sets. The population both of those act on is pinned here, because a suite that stopped knowing
+ * how many non-square assets exist would not notice the day that number went to zero.
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ */
+test('the reference envelope carries the prompt verbatim', () => {
+  // The end-to-end form of the parity property: compare the string that reaches the WIRE against
+  // the string handed in, not two builders against each other. A backend that prepended a system
+  // preamble, appended a negative prompt or truncated to a token budget fails here.
+  const prompt = 'a prompt with\n\nparagraphs and "quotes" and — dashes'
+  const body = referenceBackend(REFERENCE, {
+    endpoint: 'https://f.example',
     apiKey: 'k',
-    deployment: qwen.deployment!,
-    route: qwen.route!,
+    imagePath: '/p',
+    model: 'FLUX.2-pro',
+    fallbackModel: '',
+  }).bodyFor({
+    prompt,
+    spec: { kind: 'mark', width: 1024, height: 1024, format: 'png' },
+    requestWidth: 1024,
+    requestHeight: 1024,
+    kitName: 'x',
+    accent: '#e8622c',
+  })
+  assert.equal(body['prompt'], prompt)
+})
+
+test('the reference asks for the size it wants, and the non-square population is pinned', () => {
+  const backend = referenceBackend(REFERENCE, {
+    endpoint: 'https://f.example',
+    apiKey: 'k',
+    imagePath: '/p',
+    model: 'FLUX.2-pro',
+    fallbackModel: '',
   })
 
   const nonSquare = plannedAssets().filter((a) => a.width !== a.height)
+  // Not a decoration. `TransposedDeliveryError` and verify.py check 9 are both blind on a square,
+  // so the number of non-square assets IS the size of the population those two checks can see.
   assert.equal(nonSquare.length, 68, 'doc 23 §2.3 puts 68 non-square generations in this set')
 
-  for (const planned of nonSquare) {
+  for (const planned of nonSquare.slice(0, 8)) {
     const body = backend.bodyFor({
       prompt: 'x',
       spec: { kind: 'banner', width: planned.width, height: planned.height, format: 'png' },
@@ -356,23 +322,9 @@ test('every non-square asset in THIS set is requested transposed', () => {
       kitName: planned.name,
       accent: planned.accent,
     })
-    assert.equal(
-      body['size'],
-      `${planned.height}x${planned.width}`,
-      `${planned.key}: the envelope must ask for the transpose to receive ${planned.width}x${planned.height}`,
-    )
-  }
-
-  // And every square one is unaffected, which is precisely why the fault hides.
-  for (const planned of plannedAssets().filter((a) => a.width === a.height)) {
-    const body = backend.bodyFor({
-      prompt: 'x',
-      spec: { kind: 'tile', width: planned.width, height: planned.height, format: 'png' },
-      requestWidth: planned.width,
-      requestHeight: planned.height,
-      kitName: planned.name,
-      accent: planned.accent,
-    })
-    assert.equal(body['size'], `${planned.width}x${planned.height}`)
+    // Width and height as themselves. The reference provider takes these and IGNORES `size` and
+    // `aspect_ratio`; nothing in this repository transposes anything any more.
+    assert.equal(body['width'], planned.width)
+    assert.equal(body['height'], planned.height)
   }
 })

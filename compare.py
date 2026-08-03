@@ -3,7 +3,7 @@
 
     python3 compare.py                      # every set present: sheets + the measured report
     python3 compare.py --no-sheets          # the numbers only
-    python3 compare.py --provider flux-2-pro --provider qwen-image-2512
+    python3 compare.py --provider flux-2-pro
 
 ## What this is, and what it is not
 

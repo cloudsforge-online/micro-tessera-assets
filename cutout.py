@@ -31,7 +31,7 @@ reason. A hard threshold leaves a 1-pixel dark fringe on every anti-aliased edge
 invisible on one sprite and unmistakable on a screen holding two hundred of them.
 
     python3 cutout.py                        # every uncut sprite in the reference set
-    python3 cutout.py --provider qwen-image-2512
+    python3 cutout.py --provider flux-2-pro
     python3 cutout.py --force                # re-cut
 """
 
@@ -161,7 +161,11 @@ def main(argv: list[str]) -> int:
             entry["postProcessing"] = steps
             print(f"{relative}  {cleared} px cleared  c2pa={c2pa}")
 
-        provider.manifest.write_text(json.dumps(document, indent=2) + "\n")
+        # `ensure_ascii=False`, to match generate.ts's JSON.stringify. Without it this tool
+        # re-escapes every non-ASCII character generate.ts wrote raw, so MANIFEST.json
+        # oscillates between two byte-different encodings of identical data depending on
+        # which tool touched it last, and every run shows a diff nobody made.
+        provider.manifest.write_text(json.dumps(document, indent=2, ensure_ascii=False) + "\n")
 
     for problem in problems:
         print(f"SKIPPED {problem}", file=sys.stderr)

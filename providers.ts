@@ -16,8 +16,6 @@ export type AdapterKind =
   | 'foundry-serverless'
   /** `/managed-deployments/<name>/v1/chat/completions`. Real, on another host; see backends.ts. */
   | 'foundry-managed-compute'
-  /** `/openai/v1/images/generations`. What Qwen-Image 2512 actually serves on. */
-  | 'foundry-openai-images'
 
 /**
  * Whether a provider can be run against at all.
@@ -49,9 +47,10 @@ export interface Provider {
    * Which prompt dialect this set was generated in — `dialects.json`, read through `dialects.ts`.
    *
    * `adapter` says how a set was POSTED; this says what was posted. Two providers may share a
-   * deployment, a route, a key and a model and still be two different experiments, and
-   * `qwen-image-2512` / `qwen-image-2512-positive` are exactly that pair: identical in every wire
-   * fact, different in one field.
+   * deployment, a route, a key and a model and still be two different experiments — identical in
+   * every wire fact, different in this one field. The registry held exactly such a pair while the
+   * Qwen challenger was on trial; both entries went when the owner withdrew that model, and the
+   * machinery that made the pair expressible is kept because the next challenger will need it.
    *
    * Parity is enforced WITHIN a dialect and re-derived ACROSS dialects; see `dialects.ts`'s header
    * for why that is stronger than the plain equality it replaces, rather than weaker.

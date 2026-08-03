@@ -1,7 +1,10 @@
 /**
  * The Tessera generation run. Drives `@cloudsforge/studio`'s FLUX 2 Pro engine for the reference
- * set and Qwen-Image 2512's OpenAI-shaped images route for the candidate, and records the
- * provenance the service's `generation_jobs` and `assets` tables record.
+ * set, and records the provenance the service's `generation_jobs` and `assets` tables record.
+ *
+ * It drove a second, challenger provider until the owner withdrew Qwen-Image 2512 from the estate.
+ * The provider seam it did that through is kept — see `backends.ts` — and only the withdrawn
+ * model's own envelope went with it.
  *
  * ## What is reused, and what deliberately is not
  *
@@ -20,23 +23,21 @@
  *
  * ## The art direction is not neutral, and doc 23 §1.1 says why
  *
- * Tessera is **painterly on purpose**. Qwen-Image 2512 reads a FLAT brief photographically and
- * returns framed, bevelled game-UI artefacts whatever the prompt asks for — it produced 7.1x the
- * file size per megapixel on micro-brand's flat set against 2.6x on the painterly game sets. A
- * flat brief makes the two-model comparison one-sided before it starts. So the direction below is
- * luminous painterly gouache, and this is the first brief in the estate that gives Qwen somewhere
- * to go. That makes the comparison harder to predict, which is the point of running it.
+ * Tessera is **painterly on purpose**, and doc 23 §1.1 argues it as art direction rather than as
+ * a hedge. It was ALSO the choice that made the model comparison fair: the withdrawn challenger
+ * read a FLAT brief photographically and returned framed, bevelled game-UI artefacts whatever the
+ * prompt asked for, so a flat brief would have decided the comparison before it started. A
+ * painterly one gave it somewhere to go. COMPARISON.md records where it went.
  *
- * The prompts nonetheless carry a hardening clause aimed at Qwen's *measured* failure modes —
- * the recursive picture-frame grid and the Hokusai pastiche it returned on two micro-brand icons.
- * It is added to BOTH models identically, because a clause that went to one model and not the
- * other would destroy the only property this whole exercise depends on.
+ * The prompts still carry the hardening clause that was aimed at that model's *measured* failure
+ * modes — the recursive picture-frame grid and the Hokusai pastiche. It is KEPT now the challenger
+ * is gone, because it is what the shipped 288 were actually generated from: stripping it would
+ * make every recorded prompt in MANIFEST.json unreproducible, for a saving of a few tokens.
  *
  * ## Usage
  *
  *   cd ../studio && node --import tsx ../tessera-assets/generate.ts --plan
  *   cd ../studio && node --import tsx ../tessera-assets/generate.ts
- *   cd ../studio && node --import tsx ../tessera-assets/generate.ts --provider qwen-image-2512
  *   cd ../studio && node --import tsx ../tessera-assets/generate.ts --only objects/seating-stool
  *   cd ../studio && node --import tsx ../tessera-assets/generate.ts --limit 10
  *   cd ../studio && node --import tsx ../tessera-assets/generate.ts --derive-only
@@ -246,18 +247,19 @@ const NO_TEXT =
   'that area empty instead.'
 
 /**
- * **The artefact guard, and the one clause in this file written from measurement of the CANDIDATE
+ * **The artefact guard, and the one clause in this file written from measurement of the CHALLENGER
  * rather than of the reference.**
  *
- * Qwen-Image 2512's measured failure modes on the estate's earlier sets were a framed, bevelled
+ * The withdrawn challenger's measured failure modes on the estate's earlier sets were a framed, bevelled
  * game-UI artefact returned regardless of the ask; a recursive picture-frame grid (an icon drawn
  * as a wall of smaller framed copies of itself); and a Hokusai pastiche on a brief that named no
  * artist. Each sentence below answers one of those by name.
  *
- * It goes to BOTH models, identically and in the same position, and that is not a courtesy — a
- * clause sent to one model and not the other would make the two sets incomparable while every
- * file involved still looked correct, which is exactly the failure `parity.test.ts` exists to
- * make impossible. FLUX pays a few tokens for a guard it does not need; the comparison stays valid.
+ * It went to BOTH models, identically and in the same position, and that was not a courtesy — a
+ * clause sent to one model and not the other would have made the two sets incomparable while every
+ * file involved still looked correct, which is exactly the failure `parity.test.ts` exists to make
+ * impossible. FLUX paid a few tokens for a guard it does not need, and it still does: this string
+ * is inside all 288 recorded prompts, so it is now part of the record rather than a live choice.
  */
 const ARTEFACT_GUARD =
   'This image IS the artwork, not a picture of artwork. It has no frame, no border, no mount, no ' +
@@ -321,7 +323,7 @@ function footprintClause(footprint: string): string {
  * about where a hat goes.
  *
  * **THIS CLAUSE IS THE REPOSITORY'S ONE MEASURED PROMPT DEFECT, AND THIS IS THE REPAIR.** The
- * first run of these 40 overlays put 32 of FLUX's and 40 of Qwen's outside their slot's band. The
+ * first run of these 40 overlays put 32 of FLUX's and all 40 of the challenger's outside their band. The
  * clause then read `Draw ONLY <region>` followed by "everything outside the named part of the
  * frame is empty" and four `do not`s — a positive half naming the garment and a NEGATIVE half
  * naming where the ink may not go. Both models drew the garment beautifully and both ignored the
@@ -587,10 +589,11 @@ export interface ManifestEntry {
   /** What was asked for — rounded UP to the 16-pixel grid, never down. */
   readonly requestedSize: string
   /**
-   * What the bytes on disk actually MEASURE. Never what the response reported: Qwen's images route
-   * reports the size it was asked for and delivers its transpose, so a manifest built from the
-   * response would be wrong and self-consistent at the same time. verify.py check 8 re-reads this
-   * off the bytes and compares it across providers.
+   * What the bytes on disk actually MEASURE. Never what the response reported. The withdrawn
+   * challenger's images route reported the size it was ASKED for and delivered the transpose, so a
+   * manifest built from the response would have been wrong and self-consistent at the same time.
+   * That endpoint is gone and the rule is not: verify.py check 9 re-reads this off the bytes and
+   * `TransposedDeliveryError` refuses to keep a rotated file, for every provider.
    */
   readonly deliveredSize: string
   readonly sizing: string
@@ -651,10 +654,9 @@ async function writeManifest(provider: Provider, manifest: Manifest): Promise<vo
     providerLabel: provider.label,
     billing: provider.billing,
     generator: '@cloudsforge/studio via tessera-assets/generate.ts',
-    endpoint:
-      provider.id === REFERENCE.id
-        ? 'Azure AI Foundry, Black Forest Labs FLUX 2 Pro'
-        : 'Azure AI Foundry Global Managed Compute, Qwen-Image 2512',
+    // From the registry, never from a hardcoded pair. A second provider's manifest must describe
+    // that provider rather than whichever one this branch was written against.
+    endpoint: provider.vendor,
     specification:
       'docs/ecosystem/23-tessera.md §2 (the manifest), content/*.json (the canonical trees), ' +
       'ART_BIBLE.md (the direction).',
@@ -706,18 +708,28 @@ function isContentRefusal(err: unknown): boolean {
 /**
  * A delivered image whose dimensions are the transpose of what was asked for.
  *
- * The candidate's `size` parameter is transposed at the far end and its RESPONSE reports the size
- * it was asked for, so nothing in the JSON can catch this — only the bytes can. `backends.ts`
- * compensates in the envelope; this class is what happens if that compensation is ever removed,
- * and it is thrown per asset rather than discovered on a contact sheet 288 images later.
+ * **THIS IS THE DETECTION, AND IT OUTLIVED THE MODEL IT WAS WRITTEN FOR.** The withdrawn Qwen
+ * deployment took a `size` parameter, transposed it at the far end, and then REPORTED the size it
+ * was asked for — so nothing in the response JSON could catch it and a square probe could not see
+ * it at all. `backends.ts` carried a workaround (send height x width) and that workaround has been
+ * deleted along with the endpoint, because a compensation for one vendor's bug is dead weight the
+ * moment that vendor is gone.
+ *
+ * This class is not. It is a measurement of the BYTES against the request, it runs on every
+ * non-square generation for every provider including the reference, and it is what would have
+ * caught the bug in the first place had it existed then. Deleting it with the workaround would be
+ * removing the smoke alarm along with the fire — and 68 of this set's 288 generations are
+ * non-square, so a provider that silently rotates them costs a whole run before a contact sheet
+ * shows it.
  */
 export class TransposedDeliveryError extends Error {
   constructor(key: string, wanted: string, got: string) {
     super(
-      `${key}: asked for ${wanted} and the bytes measure ${got}, which is its transpose. The ` +
-        "candidate endpoint's `size` parameter is transposed and backends.ts compensates by " +
-        'sending height x width; if that compensation has been "corrected", every non-square ' +
-        'asset in this set is rotated and the response JSON says nothing is wrong.',
+      `${key}: asked for ${wanted} and the bytes measure ${got}, which is its transpose. This ` +
+        'provider is delivering rotated images and its response JSON will not say so. Do not ' +
+        "post-rotate the bytes — that is a second lossy pass on artwork the model composed for " +
+        'the frame it thought it had. Correct it in that provider\'s own envelope in backends.ts, ' +
+        'and leave this measurement in place to prove the correction works.',
     )
     this.name = 'TransposedDeliveryError'
   }
@@ -883,7 +895,7 @@ async function writePlanJson(): Promise<number> {
     total: planned.length,
     derivedTotal: derived.length,
     grandTotal: planned.length + derived.length,
-    /** The 68 non-square generations — the block Qwen's transposed `size` would have wrecked. */
+    /** The 68 non-square generations — the block a transposing endpoint would silently rotate. */
     nonSquare: planned.filter((a) => a.width !== a.height).length,
     assets: planned.map((asset) => ({
       key: asset.key,

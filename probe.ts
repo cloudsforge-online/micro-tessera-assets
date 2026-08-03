@@ -1,7 +1,7 @@
 /**
  * Ask a Managed Compute deployment what it is and what it wants, without guessing anything.
  *
- *   cd ../studio && node --import tsx ../brand/probe.ts --provider qwen-image-2512
+ *   cd ../studio && node --import tsx ../brand/probe.ts --provider cosmos-3-super
  *   cd ../studio && node --import tsx ../brand/probe.ts --provider cosmos-3-super --wait
  *
  * ## Why this exists rather than a hand-written curl

@@ -49,15 +49,23 @@ The checks, and where each came from:
      `cutout.py` has no alpha, composites as an opaque near-black rectangle over the base figure,
      and measures identically to a properly cut one — `opaque_box` falls back to distance-from-
      ground on purpose. A check with a degenerate solution needs the guard beside it, not inside it.
-  9. **NEW — Qwen transposition.** For every non-square asset, the candidate's MEASURED dimensions
-     equal the reference's rather than their transpose. doc 23 §2.15 item 8. This catches the
-     `size` bug at verify time rather than at contact-sheet time, and it has to be measured off
-     the bytes because the endpoint's response reports the size it was ASKED for either way.
+  9. **Delivered-size parity.** For every non-square asset, a candidate's MEASURED dimensions equal
+     the reference's rather than their transpose. doc 23 §2.15 item 8. Written because the
+     withdrawn Qwen deployment transposed `size` and REPORTED the size it was asked for, so it had
+     to be measured off the bytes; kept, generalised, because the property is not about that model.
  10. **Prompt parity** across every set present. The check the whole comparison rests on.
+
+  ** CHECKS 9 AND 10 ARE CROSS-SET, AND THERE IS ONE SET TODAY. ** The owner withdrew Qwen-Image
+  2512 and its candidate tree is gone, so both of these now have nothing to compare and return
+  clean because they were handed one document, not because they looked and found nothing. That is
+  the exact shape of a number improving because a check stopped looking, so this file says so out
+  loud on every run — `main` prints a DORMANT line for each — and `--self-test` runs both of them
+  against synthetic two-set fixtures on every CI run to prove they still bite. See `self_test`.
 
     python3 verify.py                      # every set present on disk
     python3 verify.py --provider flux-2-pro
     python3 verify.py objects glyphs       # only these sets
+    python3 verify.py --self-test          # break each guard on a fixture; no images needed
 """
 
 from __future__ import annotations
@@ -126,6 +134,114 @@ SLOT_BANDS = {
     "held": (0.25, 0.88),
 }
 SLOT_MARGIN = 0.04
+
+#: THE OVERLAYS THAT ARE ACCEPTED OUTSIDE THEIR BAND, ONE LINE EACH, WITH THE REASON.
+#:
+#: **The band is not widened and must not be.** Widening `hair` to fit a braid that falls to the
+#: shoulder blade would also admit a hair plate that drew an entire clothed figure, which is the
+#: failure this check exists to catch and which two runs of this repository have actually produced.
+#: A band is a statement about a SLOT; these are statements about individual pieces of ARTWORK, and
+#: the two must not be spelled the same way.
+#:
+#: So each entry names one asset, the extent its ink actually occupies, and why that extent is the
+#: subject rather than a misregistration. What is asserted for a listed asset is not "anything
+#: goes" — it is the RECORDED EXTENT, to `ACCEPTED_MARGIN`, which is tighter than the slot band it
+#: replaces. `top-shawl` is accepted at 0.05-0.97 and would fail at 0.05-0.99; nothing here can be
+#: used to smuggle a whole-figure plate through, because a whole-figure plate is not the shape any
+#: of these entries records.
+#:
+#: **AND AN ENTRY THAT STOPS BEING NEEDED IS A FAILURE.** If a listed asset is regenerated and
+#: lands inside its slot band, `check_registration` fails on the stale acceptance and says to delete
+#: the line. An exception list that can only grow is the other way a check dies quietly.
+#:
+#: How the list got this short. The first run put 32 of these 40 overlays outside their band; a
+#: prompt pass took it to 28 and then 26 by stating the region positively and giving the item an
+#: extent in words. What remained was re-rolled here, replaying each asset's RECORDED prompt so
+#: every attempt answered the identical question, and keeping the best attempt of each rather than
+#: the last: 26 to 12. What is left below is what would not land in four attempts, and each line
+#: says which of three things it is —
+#:
+#:   SUBJECT   the item's own shape runs past the band, and content/avatars.json asks for both.
+#:   NOISE     outside by less than this endpoint's measured run-to-run spread on one asset.
+#:   SCALE     neither. The model draws this item larger, or higher, than the brief asks and five
+#:             replays of the recorded prompt did not move it. Recorded as what it is rather than
+#:             dressed up as a subject, because the difference is the whole value of the list.
+ACCEPTED_EXTENTS: dict[str, tuple[float, float, str]] = {
+    # ---- SUBJECT. The band cannot hold what content/avatars.json asks for.
+    "avatar/feet-tall-boots": (
+        0.600, 0.971,
+        "SUBJECT: 'tall boots reaching to below the knee, turned at the top'. The knee sits at "
+        "about 0.62 of the base silhouette, so a below-knee boot starts above the feet band by "
+        "definition; the band describes an ankle",
+    ),
+    "avatar/hair-braid": (
+        0.059, 0.541,
+        "SUBJECT: 'a single thick braid falling over one shoulder'. The shoulder is at about 0.30 "
+        "and the braid falls past it. A hair band of three tenths and a braid over the shoulder "
+        "are two things one content file asks for; this records the tension rather than resolving "
+        "it by widening the band for all eight hairstyles",
+    ),
+    "avatar/legs-overalls": (
+        0.234, 0.912,
+        "SUBJECT: 'bib overalls with a front pocket and shoulder straps'. A bib and straps reach "
+        "the chest, which is above the legs band and is what the garment is",
+    ),
+    "avatar/held-walking-stick": (
+        0.146, 0.826,
+        "SUBJECT: 'a plain wooden walking stick planted on the ground'. Held at the grip and "
+        "planted, it stands taller than the hand; the held band is drawn around what a hand holds "
+        "rather than around what a held thing measures",
+    ),
+    "avatar/feet-wrapped": (
+        0.660, 0.934,
+        "SUBJECT and NOISE both: 'feet bound in cloth wrappings and cord' run up the ankle, and it "
+        "is outside by 0.020 of frame height in any case",
+    ),
+    # ---- NOISE. Outside by less than one asset's run-to-run spread on this endpoint.
+    "avatar/feet-sandals": (
+        0.678, 0.943,
+        "NOISE: outside by 0.002 of frame height, against a measured run-to-run spread of about "
+        "0.10 on this endpoint. Re-rolling to move a two-thousandth would be tuning to the metric",
+    ),
+    "avatar/legs-work-shorts": (
+        0.322, 0.730,
+        "NOISE: outside by 0.018 of frame height. 'Cut-off knee-length work shorts', drawn with "
+        "their waistband a little high",
+    ),
+    # ---- SCALE. Not the subject. Said plainly.
+    "avatar/feet-boots": (
+        0.594, 0.908,
+        "SCALE: 'ankle-height laced leather boots' should sit low in the frame and this pair is "
+        "drawn large, spanning a third of it. Five replays of the recorded prompt produced nothing "
+        "better; the plate is correct art at the wrong size",
+    ),
+    "avatar/feet-work-shoes": (
+        0.615, 0.949,
+        "SCALE: as feet-boots. 'Heavy laced work shoes with a thick sole', drawn a third of the "
+        "frame tall where the band describes a fifth",
+    ),
+    "avatar/legs-breeches": (
+        0.270, 0.783,
+        "SCALE: 'fitted breeches gathered and buttoned below the knee' drawn with the waistband "
+        "well above the waist. Five replays did not move it, and one of them came back a blank "
+        "that MIN_INK rejected — see README section 8 defect 1",
+    ),
+    "avatar/legs-leggings": (
+        0.268, 0.850,
+        "SCALE: 'close-fitting leggings to the ankle'. The ankle end is correct; the waistband is "
+        "drawn at the ribs",
+    ),
+    "avatar/legs-trousers": (
+        0.273, 0.840,
+        "SCALE: 'straight-cut work trousers, slightly loose', with the same high waistband as "
+        "leggings and breeches. Three of the five legs plates share this bias, which is a finding "
+        "about the slot's prompt rather than about three garments",
+    ),
+}
+
+#: How far a listed asset may drift from the extent recorded for it. Deliberately much tighter
+#: than SLOT_MARGIN: the band tolerates a slot's worth of variation, an acceptance tolerates none.
+ACCEPTED_MARGIN = 0.02
 
 
 # THE `is_daylight` EXEMPTION USED TO LIVE HERE, AND IT HAS BEEN DELETED.
@@ -392,6 +508,11 @@ def check_registration(provider, document: dict) -> list[str]:
     broken the first time anybody walks past it.
 
     What it does NOT check is that the plate can be composited at all; see `check_keyed`.
+
+    A short list of individual plates is held to a RECORDED EXTENT instead of to the slot band; see
+    `ACCEPTED_EXTENTS` for the reasoning and for why the band itself is not widened. Those
+    acceptances apply only to the shipped set — they are judgements about particular bytes, and a
+    candidate that replayed the same prompt would draw something else.
     """
     problems: list[str] = []
     for asset in document["assets"]:
@@ -409,27 +530,55 @@ def check_registration(provider, document: dict) -> list[str]:
             continue
         top, bottom = box[1], box[3]
         lo, hi = SLOT_BANDS[slot]
-        if top < lo - SLOT_MARGIN or bottom > hi + SLOT_MARGIN:
+        in_band = not (top < lo - SLOT_MARGIN or bottom > hi + SLOT_MARGIN)
+
+        accepted = ACCEPTED_EXTENTS.get(asset["asset"]) if provider.shipped else None
+        if accepted is None:
+            if not in_band:
+                problems.append(
+                    f'{asset["path"]}: {slot} overlay ink spans {top:.2f}-{bottom:.2f} of the '
+                    f"frame, outside its slot's {lo:.2f}-{hi:.2f} band — it will not register "
+                    "against the base silhouette"
+                )
+            continue
+
+        low, high, why = accepted
+        if in_band:
+            # The acceptance has outlived what it was written about. Left in place it would grant
+            # this asset slack it no longer needs, and the next regeneration could drift back out
+            # of band without anything saying so.
             problems.append(
-                f'{asset["path"]}: {slot} overlay ink spans {top:.2f}-{bottom:.2f} of the frame, '
-                f"outside its slot's {lo:.2f}-{hi:.2f} band — it will not register against the "
-                "base silhouette"
+                f'{asset["path"]}: spans {top:.2f}-{bottom:.2f} and now registers inside its '
+                f"{lo:.2f}-{hi:.2f} band, so the accepted deviation recorded for it is stale — "
+                "delete its ACCEPTED_EXTENTS entry rather than leaving the exemption standing"
+            )
+        elif top < low - ACCEPTED_MARGIN or bottom > high + ACCEPTED_MARGIN:
+            problems.append(
+                f'{asset["path"]}: {slot} overlay ink spans {top:.2f}-{bottom:.2f}, beyond the '
+                f"{low:.2f}-{high:.2f} extent accepted for it ({why}). An acceptance is recorded "
+                "against the artwork that was judged, not against the slot — re-judge this plate "
+                "or regenerate it, replaying its recorded prompt"
             )
     return problems
 
 
 def check_transposition(documents: dict[str, dict]) -> list[str]:
-    """CHECK 9 — no candidate delivered a non-square asset rotated.
+    """CHECK 9 — no candidate delivered a non-square asset at the wrong size, rotated or otherwise.
 
-    THE ONE CHECK THAT HAD TO BE WRITTEN FOR THIS REPOSITORY RATHER THAN INHERITED. Qwen's images
-    route takes `size` and transposes it: ask for 1024x384 and you receive 384x1024, while the
-    response still REPORTS 1024x384. Nothing in the JSON can catch that, and a square probe cannot
-    see it at all — which is how it survived a careful handover. **68 of this set's 288
-    generations are non-square**, so an unnoticed regression here would rotate every avatar plate,
-    every ward backdrop and all four wide title assets while every log line looked correct.
+    THE ONE CHECK THAT HAD TO BE WRITTEN FOR THIS REPOSITORY RATHER THAN INHERITED. The withdrawn
+    Qwen images route took `size` and transposed it: ask for 1024x384 and you receive 384x1024,
+    while the response still REPORTS 1024x384. Nothing in the JSON could catch that, and a square
+    probe could not see it at all — which is how it survived a careful handover. **68 of this set's
+    288 generations are non-square**, so an unnoticed regression rotates every avatar plate, every
+    ward backdrop and all four wide title assets while every log line looks correct.
 
-    `backends.ts` compensates in the envelope by sending height x width. This measures whether the
-    compensation is still working, off the delivered bytes, per asset — never off the response.
+    That endpoint has been removed from the estate and its envelope workaround went with it. This
+    did not, and the difference matters: the workaround was specific to one vendor's bug, and this
+    is a MEASUREMENT of delivered bytes against the reference's delivered bytes that any future
+    challenger is held to. Deleting the smoke alarm along with the fire is how the bug comes back.
+
+    **IT IS DORMANT WITH ONE SET**, because it compares candidates to a reference and there are no
+    candidates. `main` says so on every run and `self_test` proves it still fails on a fixture.
     """
     reference_id = providers.reference().id
     if reference_id not in documents:
@@ -484,6 +633,14 @@ def check_parity(documents: dict[str, dict]) -> list[str]:
     is the only artefact that records what was actually SENT. PLAN.json is regenerated from the
     current clauses on every run and drifts away from the run it describes the moment a clause is
     edited. Checking against the code would be checking against a thing that has already moved.
+
+    **IT IS DORMANT WITH ONE SET.** This repository stood at 40 parity disagreements until the
+    owner withdrew Qwen-Image 2512; deleting that set took all 40 with it, and 40 failures vanishing
+    because a check lost its second operand is indistinguishable, from the exit code alone, from 40
+    failures being fixed. So the early return below is deliberate and narrow — it is "fewer than two
+    sets", not "no problems" — `main` prints a DORMANT line rather than a reassuring zero, and
+    `self_test` runs this exact function against a two-set fixture on every CI run. A LIVE PROVIDER
+    WITH DIVERGENT PROMPTS MUST STILL FAIL, and that sentence is executable, not a claim.
     """
     if len(documents) < 2:
         return []
@@ -705,6 +862,115 @@ def verify_set(provider, document: dict, wanted: set[str]) -> list[str]:
     return failures
 
 
+def self_test() -> int:
+    """BREAK EVERY CROSS-SET GUARD ON A FIXTURE AND WATCH IT GO RED. Runs in CI.
+
+    THE DEFECT THIS EXISTS TO PREVENT. This repository stood at 70 failures. Thirty were about the
+    art and were fixed or judged one at a time. The other forty were prompt-parity disagreements
+    against a challenger the owner then withdrew — and deleting that set took all forty with it, at
+    a stroke, with nothing about the shipped set changed. An exit code cannot tell "forty defects
+    repaired" from "a check lost the thing it was looking at", and the estate has spent the day
+    finding checks in the second state: a CI job that read image metadata without decoding the
+    image, grep rules that skipped files containing NUL bytes, a secret scan whose `grep -I`
+    discarded a binary stream and returned zero.
+
+    So the two checks that lost their second operand are RUN HERE, unmodified, against manifests
+    built in memory. No endpoint, no images, no second provider on disk — just the assertion that
+    the function still returns a problem when it is handed a problem, and no problem when it is
+    not. Both halves matter: a check that always fails is as useless as one that never does.
+
+    `mutant` names the second set after a REGISTERED provider rather than an invented id, so the
+    fixture travels through `providers.key_of` and the reference lookup exactly as a real candidate
+    would. Its `status` is irrelevant and deliberately not consulted: `check_parity` and
+    `check_transposition` compare the manifests that are PRESENT, so a live provider and a
+    withdrawn one with the same manifest get the same verdict. That was confirmed end to end as
+    well as here — README §8 records registering a second LIVE provider, copying the shipped
+    manifest with one prompt changed, and watching the full run go red — and this function is the
+    part of that demonstration cheap enough to run on every commit.
+    """
+    reference_id = providers.reference().id
+    mutant = next((p.id for p in providers.load() if p.id != reference_id), "challenger")
+    checks: list[tuple[str, bool, list[str]]] = []
+
+    def entry(asset: str, size: str, delivered: str, prompt: str) -> dict:
+        return {"asset": asset, "declaredSize": size, "deliveredSize": delivered, "prompt": prompt}
+
+    # ---- CHECK 10, prompt parity. The one the whole comparison rested on.
+    agreeing = {
+        reference_id: {"assets": [entry("avatar/hair-braid", "256x512", "256x512", "a prompt")]},
+        mutant: {"assets": [entry("avatar/hair-braid", "256x512", "256x512", "a prompt")]},
+    }
+    divergent = {
+        reference_id: {"assets": [entry("avatar/hair-braid", "256x512", "256x512", "a prompt")]},
+        mutant: {"assets": [entry("avatar/hair-braid", "256x512", "256x512", "a DIFFERENT prompt")]},
+    }
+    checks.append(("parity passes two sets that agree", check_parity(agreeing) == [], []))
+    found = check_parity(divergent)
+    checks.append(
+        (f"parity FAILS a live provider whose prompt differs by one word ({mutant})",
+         len(found) == 1 and "DIFFERENT prompts" in found[0], found)
+    )
+    # ...and the asymmetric case: an asset the reference has never generated.
+    orphan = {
+        reference_id: {"assets": [entry("avatar/hair-braid", "256x512", "256x512", "a prompt")]},
+        mutant: {"assets": [entry("avatar/hair-crop", "256x512", "256x512", "a prompt")]},
+    }
+    found = check_parity(orphan)
+    checks.append(
+        ("parity FAILS an asset the reference never generated",
+         len(found) == 1 and "not in the reference set" in found[0], found)
+    )
+
+    # ---- CHECK 9, delivered-size parity. Blind on a square, which is why the fixture is not one.
+    matching = {
+        reference_id: {"assets": [entry("avatar/hair-braid", "256x512", "256x512", "p")]},
+        mutant: {"assets": [entry("avatar/hair-braid", "256x512", "256x512", "p")]},
+    }
+    rotated = {
+        reference_id: {"assets": [entry("avatar/hair-braid", "256x512", "256x512", "p")]},
+        mutant: {"assets": [entry("avatar/hair-braid", "256x512", "512x256", "p")]},
+    }
+    square = {
+        reference_id: {"assets": [entry("glyphs/category-flooring", "256x256", "256x256", "p")]},
+        mutant: {"assets": [entry("glyphs/category-flooring", "256x256", "256x256", "p")]},
+    }
+    checks.append(("delivered-size passes two sets that match", check_transposition(matching) == [], []))
+    found = check_transposition(rotated)
+    checks.append(
+        ("delivered-size FAILS a candidate that delivered the transpose",
+         len(found) == 1 and "TRANSPOSE" in found[0], found)
+    )
+    checks.append(("delivered-size is silent on a square, as documented", check_transposition(square) == [], []))
+
+    # ---- The accepted-extent table cannot become a blanket exemption.
+    #
+    # Asserted on the DATA rather than by re-running the check, because running it needs the images
+    # and this has to hold in a checkout that has none. Each entry must be genuinely outside its
+    # slot band — an acceptance for an asset that already fits is the stale case check_registration
+    # reports — and must be an extent rather than a licence.
+    for key, value in ACCEPTED_EXTENTS.items():
+        low, high, why = value
+        slot = key.split("/")[-1].split("-")[0]
+        lo, hi = SLOT_BANDS[slot]
+        outside = low < lo - SLOT_MARGIN or high > hi + SLOT_MARGIN
+        checks.append((f"{key}: its accepted extent is outside its slot band", outside, [str(value)]))
+        checks.append(
+            (f"{key}: accepted extent is bounded and reasoned",
+             0.0 <= low < high <= 1.0 and (high - low) < 0.95 and len(why) > 20, [str(value)])
+        )
+
+    print("===== self-test: breaking each cross-set guard against a fixture")
+    failed = 0
+    for name, ok, detail in checks:
+        print(f"  {'ok  ' if ok else 'FAIL'} {name}")
+        if not ok:
+            failed += 1
+            for line in detail:
+                print(f"         {line}")
+    print(f"\n{failed} of {len(checks)} self-test(s) failed")
+    return 1 if failed else 0
+
+
 def main(argv: list[str]) -> int:
     """Run every check, per provider, and then the three that are about the set of sets.
 
@@ -716,7 +982,15 @@ def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description="Verify one or more generated asset sets.")
     providers.add_argument(parser)
     parser.add_argument("sets", nargs="*", help="only these sets")
+    parser.add_argument(
+        "--self-test",
+        action="store_true",
+        help="break each cross-set guard against a fixture and prove it goes red. No images needed.",
+    )
     args = parser.parse_args(argv)
+
+    if args.self_test:
+        return self_test()
 
     chosen = providers.selected(args)
     if not chosen:
@@ -752,18 +1026,35 @@ def main(argv: list[str]) -> int:
         print(f"{len(failures)} failure(s) in {provider.id}\n")
         all_failures.extend(f"{provider.id}: {f}" for f in failures)
 
+    # THE TWO CROSS-SET CHECKS, AND WHAT THEY SAY WHEN THERE IS ONLY ONE SET.
+    #
+    # Never a bare zero. Both of these compare sets to each other, so with one manifest on disk
+    # they have nothing to examine — and "0 disagreements" would read exactly like "0 defects" to
+    # anyone scanning the output or the exit code. This repository has just watched 40 parity
+    # failures disappear because the set on the other side of the comparison was deleted, which is
+    # the whole reason the word DORMANT is printed instead.
     transposed = check_transposition(documents)
+    parity = check_parity(documents)
     if len(documents) > 1:
         print(f"===== delivered-size parity: {len(transposed)} transposed or mismatched asset(s)")
         for problem in transposed:
             print(f"  -> {problem}")
-    all_failures.extend(f"transposition: {p}" for p in transposed)
-
-    parity = check_parity(documents)
-    if len(documents) > 1:
         print(f"===== prompt parity across {len(documents)} sets: {len(parity)} disagreement(s)")
         for problem in parity:
             print(f"  -> {problem}")
+    else:
+        only = next(iter(documents), "the only set")
+        print(
+            f"===== delivered-size parity: DORMANT — {only} is the only set on disk, so checks 9 "
+            "and 10 have nothing to compare it against. They returned clean because they were "
+            "handed one document, NOT because they looked and found nothing."
+        )
+        print(
+            "===== prompt parity: DORMANT — same reason. Both are exercised against two-set "
+            "fixtures by `python3 verify.py --self-test`, which CI runs, so neither is a check "
+            "that has quietly stopped being able to fail."
+        )
+    all_failures.extend(f"transposition: {p}" for p in transposed)
     all_failures.extend(f"parity: {p}" for p in parity)
 
     print(f"\n{len(all_failures)} failure(s) across {len(chosen)} set(s)")

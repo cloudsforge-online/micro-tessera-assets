@@ -21,7 +21,7 @@ A per-tile contact sheet shows twelve pretty diamonds and hides all three.
 Sheets land in review/, which is gitignored: they are scaffolding for a judgement, not artefacts.
 
     python3 sheet.py                       # every set, reference provider
-    python3 sheet.py --provider qwen-image-2512
+    python3 sheet.py --provider flux-2-pro
     python3 sheet.py objects               # only this set
     python3 sheet.py --field               # the tile fields
 """

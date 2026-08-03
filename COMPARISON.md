@@ -1,13 +1,36 @@
-# How the models are judged, for Tessera
+# How the models were judged, for Tessera
+
+> ## CONCLUDED. This is a record, not an open evaluation.
+>
+> **FLUX 2 Pro ships.** The Qwen-Image 2512 challenger was generated in full (288 assets + 104
+> derivatives, 741 files, 146 MB), judged against the criteria below, and lost on criterion 1 by
+> margins nothing else offsets. The owner has since withdrawn that model from the estate, and
+> **its images, its manifest, its deployment record and its registry entry have been deleted from
+> this repository.** What it measured is here. The evaluation is closed; nothing is waiting on a
+> re-run, a replay or a redeployment.
+>
+> **Read the numbers below as history that was taken, not as claims you can re-derive.** Every one
+> of them was measured off the candidate's bytes while those bytes existed. Where a figure used to
+> point at `candidates/qwen-image-2512/DEPLOYMENT.json`, that file is gone and the figure has been
+> transcribed into §8.5 so that deleting 741 images did not delete the reason the estate chose what
+> it chose.
+>
+> **What survived the deletion, and can still be checked today:** `review/compare/artefacts.json`,
+> the by-eye defect tally made by looking at the side-by-side sheets, with its scope stated; the
+> 288 recorded literal prompts in `MANIFEST.json`; and the provider seam itself — `providers.json`,
+> `backends.ts`, `replay.ts` and `verify.py`'s cross-set checks — which was kept because the estate
+> has a stated 3D and animation gap FLUX cannot fill and a next challenger is a question of when.
 
 Sections 0 to 7 were written **before either set existed**, which is the only time criteria can be
 written honestly. Once the images are on screen it is very easy to discover that the thing the
 winner happens to be good at was the thing that mattered all along. Section 8, the verdict, was
-written afterwards and says which criteria it turned on.
+written afterwards and says which criteria it turned on. Both halves are left in the tense they
+were written in, because rewriting a criterion after the result is the one thing this document
+exists to prevent.
 
-The estate has run this comparison three times and concluded **FLUX decisively** each time. This
-run is not a fourth confirmation, and the reason is in §7.0: every previous brief was one Qwen
-could not answer in its own idiom. Tessera's is not.
+The estate had run this comparison three times and concluded **FLUX decisively** each time. This
+run was not a fourth confirmation, and the reason is in §7.0: every previous brief was one Qwen
+could not answer in its own idiom. Tessera's was not — and it lost anyway.
 
 ---
 
@@ -180,7 +203,7 @@ rather than anyone's taste. A retry count is a real signal at 3× difference and
 | --- | --- | --- |
 | Bills for | each image generated | **each hour the deployment exists** |
 | Unit | provider image unit | deployment hour (H100) |
-| Source | `request_meta.cost`, per asset | `candidates/qwen-image-2512/DEPLOYMENT.json` |
+| Source | `request_meta.cost`, per asset | the deployment record, now transcribed into §8.5 |
 | Idle cost | zero | full |
 
 `compare.py` prints each in its own unit and derives **no** per-image figure for a per-hour
@@ -322,8 +345,10 @@ four assets, against a clause reading *"do not draw a framed picture hanging on 
 prohibition list does not move it. **A low artefact count for Qwen anywhere in this run is
 therefore attributable to the brief, never to the guard.**
 
-**And one defect is neither model's fault: 32 of FLUX's 40 avatar overlays and 40 of 40 of Qwen's
-are misregistered.** `verify.py` check 8 measures it and it is the largest single defect count on
+**And one defect is neither model's fault: at the time of this comparison, 32 of FLUX's 40 avatar
+overlays and 40 of 40 of Qwen's were misregistered.** (FLUX's count has since moved; README §8
+defect 1 carries the current number and the passes that produced it. The 32 is left here because
+it is what the comparison was scored on.) `verify.py` check 8 measures it and it is the largest single defect count on
 either side. But look at what was actually asked: the prompt tells the model to draw *only* the
 named region and leave the rest empty — a prohibition, phrased negatively, at the end of a long
 prompt. Both models did the positive part beautifully (the garments are the best sprite work in the
@@ -336,9 +361,21 @@ and that is recorded rather than hidden — see README §9.
 - **FLUX 2 Pro: 868.5 provider image units** over 288 generations, 3.02 per image, 104 derivatives
   free. 490 retries and 459 failed attempts, of which the overwhelming majority are `429
   RateLimitReached` on a shared serverless endpoint — wire contention, not output quality (§5).
-- **Qwen-Image 2512: deployment-hours**, recorded in
-  `candidates/qwen-image-2512/DEPLOYMENT.json`. **No per-image figure exists or is invented**: the
-  endpoint returns `quality` and `usage` as null, so there is no per-image signal at all.
+- **Qwen-Image 2512: deployment-hours.** **No per-image figure exists or is invented**: the
+  endpoint returned `quality` and `usage` as null, so there was no per-image signal at all.
+
+  The deployment record itself was deleted with the candidate tree, so what it measured is
+  transcribed here rather than left as a dangling path. An H100 Global Managed Compute deployment,
+  `qwen--qwen-image-2512`. **Creation time: never observed, and deliberately never guessed** — the
+  owner brought it up before this run began, so its billed life started earlier than anything this
+  repository could see, and writing a plausible timestamp would have turned an unknown into a
+  figure somebody would later quote. The window it *could* measure, first to last `generatedAt`,
+  was 2026-08-03T10:03:07Z to 14:21:00Z: **4.3 wall-clock hours for 288 generations**, which is
+  53.7 s per image if read serially against a **measured per-image latency of ~15.4 s**. A second
+  window on the same day, 16:55:05Z to 16:58:41Z, regenerated the 40 avatar overlays: **40 images
+  in 3 minutes 36 seconds**, after the deployment had been held open roughly six hours to deliver
+  them. Teardown was left to the owner, with a completion signal sent the moment the last asset
+  landed.
 
 **The operational finding is worth more than either number.** The candidate ran on dedicated
 hardware at ~15.4 s per image and was **idle for most of its billed life**, because a candidate may
@@ -359,12 +396,19 @@ instruction about what the image had to *be* — a material and not a scene, a g
 photograph, a region and not a figure, flat and not bevelled. Every one of its losses is a refused
 constraint and none is a failure of craft.
 
-That has a concrete consequence: **the estate should stop concluding this from prohibition-heavy
-briefs.** Both the currency marks and this run show the same thing, and the sibling repositories
-have already built the instrument to test it properly — the `positive` prompt dialect, which
-restates prohibitions as positives and refuses to send a prompt that still carries negation
-vocabulary. Tessera has 288 recorded literal prompts and a checked pipeline, which makes it the
-best corpus in the estate to run that experiment against.
+That had a concrete consequence, and it is now moot in this repository: **the estate should stop
+concluding this from prohibition-heavy briefs.** Both the currency marks and this run show the same
+thing, and the sibling repositories had already built the instrument to test it properly — the
+`positive` prompt dialect, which restates prohibitions as positives and refuses to send a prompt
+that still carries negation vocabulary. Tessera's 288 recorded literal prompts and checked pipeline
+made it the best corpus in the estate to run that experiment against.
+
+**That experiment will not be run here.** The owner withdrew the model, so there is nothing to put
+the restated brief to. The dialect machinery is left in place — `dialects.json`, `dialects.ts`,
+`dialects.py` and `replay.ts`'s cross-dialect re-derivation are untouched — because it is estate
+code shared byte-for-byte with three repositories and the finding it was built to test is about
+prompting in general rather than about one vendor. The 288 literal prompts remain the corpus,
+whenever there is a second model to ask.
 
 **Two caveats that cut against this verdict, restated so they are not lost:** §7.1 — this set
 generates no lettering at all, so the comparison is blind to Qwen's one previously measured win
