@@ -41,6 +41,12 @@ The checks, and where each came from:
   8. **NEW — footprint registration.** Every avatar overlay's opaque bounding box lies within the
      vertical band its slot declares. doc 23 §2.15 item 7: a misregistered overlay is invisible in
      a contact sheet and obvious in play, which is the definition of a check worth automating.
+ 8a. **NEW — the paper doll is keyed.** Every avatar plate has an alpha channel with something
+     transparent in it and something opaque in it. **Check 8 grades a bounding box, so it is blind
+     to the one failure that is worse than misregistration**: an overlay that never reached
+     `cutout.py` has no alpha, composites as an opaque near-black rectangle over the base figure,
+     and measures identically to a properly cut one — `opaque_box` falls back to distance-from-
+     ground on purpose. A check with a degenerate solution needs the guard beside it, not inside it.
   9. **NEW — Qwen transposition.** For every non-square asset, the candidate's MEASURED dimensions
      equal the reference's rather than their transpose. doc 23 §2.15 item 8. This catches the
      `size` bug at verify time rather than at contact-sheet time, and it has to be measured off
@@ -325,6 +331,56 @@ def opaque_box(path: Path) -> tuple[float, float, float, float] | None:
     return (box[0] / width, box[1] / height, box[2] / width, box[3] / height)
 
 
+def check_keyed(provider, document: dict) -> list[str]:
+    """CHECK 8a — every avatar plate carries a real alpha channel, and it keys something.
+
+    **CHECK 8 HAS A DEGENERATE SOLUTION AND THIS IS THE GUARD AGAINST IT.** Check 8 grades an
+    opaque BOUNDING BOX, so it is a statement about where paint is and says nothing whatever about
+    whether the file can be composited. Two ways to score well on it and ship a broken paper doll:
+
+      * **no alpha at all.** `opaque_box` deliberately falls back to distance-from-ground so that
+        check 8 holds before `cutout.py` as well as after it — which is right for check 8 and means
+        a plate that never got cut measures exactly like one that did. A paper-doll OVERLAY without
+        alpha composites as an opaque 256x512 near-black rectangle and obliterates the base figure
+        underneath it. That is strictly worse than being the wrong size, and nothing here saw it.
+      * **cut to nothing.** An over-aggressive key shrinks the box toward zero, and a smaller box
+        is easier to fit inside a band. `MIN_INK` catches an all-ground file, but it reads RGB and
+        an alpha channel of all zeroes leaves the RGB untouched.
+
+    So this asserts the property the RENDERER depends on rather than the one the band test reads:
+    the file has an alpha channel, some of it is transparent, and some of it is not. It runs on the
+    8 bases as well as the 40 overlays, because a base that lost its key is the same defect.
+
+    It is separated from check 8 rather than folded into it on purpose. They can fail
+    independently, and a plate that is correctly registered and unusable should say both things.
+    """
+    problems: list[str] = []
+    for asset in document["assets"]:
+        if asset["set"] != "avatar" or asset["derivedFrom"] is not None:
+            continue
+        path = provider.root / asset["path"]
+        if not path.exists():
+            continue
+        with Image.open(path) as raw:
+            if raw.mode not in ("RGBA", "LA") and "transparency" not in raw.info:
+                problems.append(
+                    f'{asset["path"]}: {raw.mode}, no alpha channel — this plate has not been '
+                    "keyed by cutout.py and would composite as an opaque rectangle over the base "
+                    "figure. Run `python3 cutout.py` after generating; check 8 cannot see this"
+                )
+                continue
+            alpha = raw.convert("RGBA").getchannel("A")
+            lo, hi = alpha.getextrema()
+        if hi <= 24:
+            problems.append(f'{asset["path"]}: alpha is empty (max {hi}) — the whole plate is cut away')
+        elif lo > 24:
+            problems.append(
+                f'{asset["path"]}: alpha is fully opaque (min {lo}) — nothing was cut away, so the '
+                "plate is a rectangle rather than a sprite"
+            )
+    return problems
+
+
 def check_registration(provider, document: dict) -> list[str]:
     """CHECK 8 — every avatar overlay sits inside the vertical band its slot declares.
 
@@ -332,6 +388,8 @@ def check_registration(provider, document: dict) -> list[str]:
     makes that a bounding-box match. This is the one place in the pipeline that can fail
     invisibly — a hat drawn at chest height composites cleanly, verifies cleanly, and is obviously
     broken the first time anybody walks past it.
+
+    What it does NOT check is that the plate can be composited at all; see `check_keyed`.
     """
     problems: list[str] = []
     for asset in document["assets"]:
@@ -642,6 +700,15 @@ def main(argv: list[str]) -> int:
         documents[provider.id] = document
         failures = verify_set(provider, document, set(args.sets))
         failures.extend(check_integrity(provider, document))
+        # INTEGRITY, NOT CONFORMANCE, and fatal for every set including a candidate. A
+        # misregistered plate is a judgement about art direction; an unkeyed plate is a broken
+        # file, and a broken file is not a finding about a model.
+        keyed = check_keyed(provider, document)
+        if keyed:
+            print(f"----- keying: {len(keyed)} avatar plate(s) that cannot be composited")
+            for problem in keyed:
+                print(f"  -> {problem}")
+        failures.extend(keyed)
         registration = check_registration(provider, document)
         if registration:
             print(f"----- registration: {len(registration)} misregistered overlay(s)")

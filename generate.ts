@@ -350,10 +350,49 @@ function footprintClause(footprint: string): string {
  * THE FAILURE MODE TO WATCH is the one the estate's `positive` pilot found and reported against
  * itself: restating things positively lengthens them, and a long positive description crowds out
  * the subject — that pilot regressed "idea unrecognisable" from 2/15 to 8/15. A plate correctly
- * registered but no longer recognisably a boot is a different failure, not a fix. Hence the
- * sentence below that spends its words on the garment being LARGE, filling its band, and
- * immediately recognisable: the band is a constraint on WHERE the ink goes, never on how much
- * there is of it.
+ * registered but no longer recognisably a boot is a different failure, not a fix.
+ *
+ * ## THIRD ITERATION: SAY THE EXTENT, NOT ONLY THE BOUNDS
+ *
+ * The version described above moved FLUX from 32 misregistered of 40 to 28, and moved the pictures
+ * much further than that: every overlay used to be a CLOTHED FIGURE and they are now isolated
+ * plates. **So the remaining defect is not subject, it is SCALE.** Reading the 40 bounding boxes
+ * says so in one line — the ink's mean height is roughly 0.5 of the frame in every slot, whatever
+ * band that slot declares:
+ *
+ *   slot   band height   measured mean ink height   registered
+ *   feet   0.20          0.43                       0/8
+ *   hair   0.30          0.54                       2/8
+ *   legs   0.46          0.63                       1/8
+ *   top    0.48          0.56                       3/8
+ *   held   0.50          0.55                       6/8
+ *
+ * `held` is not passing because the instruction worked. It is passing because a 0.50 band centred
+ * on the frame is what the model was going to draw anyway. Every slot whose band is SHORT (`feet`)
+ * or OFF-CENTRE (`hair`, `legs`) fails, and `legs` fails hardest of the three: seven of its eight
+ * boxes are centred within 0.03 of the frame's midline against a band centred at 0.67.
+ *
+ * **AND THE PREVIOUS CLAUSE ASKED FOR THAT.** It said the item is "drawn as large as it can be
+ * while fitting entirely inside the band" — an instruction to MAXIMISE size whose only limit was a
+ * band the model cannot measure. A diffusion model obeys the direction and drops the limit, so it
+ * drew everything big and centred. **That is also what cost the `hair` slot**, which went 6/8 to
+ * 2/8: hair drawn "as large as it can be" is hair filling half a 512-pixel frame, and `hair`'s
+ * tolerance ends at 0.46. Three of its six new failures (`crop` 0.21–0.58, `wrapped` 0.17–0.61,
+ * `topknot` 0.08–0.61) are not even too TALL, they are too LOW — the centring prior, unopposed
+ * once "the head only, the top quarter of the frame" was replaced by a band. So it is one cause,
+ * not two: "as large as it can be" plus nothing anchoring the box to a frame edge.
+ *
+ * The repair is to write the instruction in the vocabulary check 8 GRADES IN. Check 8 measures
+ * exactly two numbers — the top and the bottom of the opaque bounding box, as fractions of the
+ * frame's height — and the clause now states exactly those two numbers, plus the height between
+ * them, and it says "exactly" rather than "as large as it can be". Where a band touches a frame
+ * edge (`hair` at 0.0, `feet` at 1.0) it is anchored to THAT EDGE rather than to a percentage,
+ * because an edge is a thing a model can see and 80% is not.
+ *
+ * The identity guard is unchanged in force and shorter in words: the item still fills its box,
+ * is still centred, is still "immediately recognisable for what it is", and is still the single
+ * subject drawn with all the detail the brief asks for. What it no longer is, is LARGE — that word
+ * is deleted from both this clause and the tail, because it was the defect.
  */
 function silhouetteClause(planned: PlannedAsset): string {
   const shared = AVATARS.silhouette as string
@@ -383,16 +422,18 @@ function silhouetteClause(planned: PlannedAsset): string {
     'drawn on its own so that it can be laid over a separate base figure. It shows ' +
     `${planned.region}, and that is the whole of its subject.\n\n` +
     `EVERY DRAWN PIXEL IN THIS IMAGE SITS INSIDE ${(planned.placement ?? '').toUpperCase()}. ` +
-    `Above that band and below it, the frame is flat ${BRAND_GROUND} background for its full ` +
+    // THE TWO NUMBERS CHECK 8 GRADES, in the order it reads them off the bounding box.
+    `${overlayExtent(planned)} ` +
+    `Above that box and below it, the frame is flat ${BRAND_GROUND} background for its full ` +
     // NO WIDTH FIGURE HERE, and that is measured rather than stylistic. This sentence used to add
     // "and about two thirds of the frame width". On a `feet` plate that is 170 px of width inside
     // a 102 px band, and a model asked for both keeps the item's proportions and overflows the
     // band to do it — which is precisely the failure being fixed. Scale is now expressed against
     // the band alone, and width follows from the item's own shape.
-    'width, out to all four edges. Inside the band the item is drawn as large as it can be while ' +
-    'fitting entirely inside the band, centred left to right, and it is immediately recognisable ' +
-    'for what it is. It is the single subject of this image and it is drawn with all the detail ' +
-    'the rest of this brief asks for.\n\n' +
+    'width, out to all four edges. The item fills that box exactly: centred left to right, as ' +
+    'wide as its own shape needs to be, and immediately recognisable for what it is. It is the ' +
+    'single subject of this image and it is drawn at that size with all the detail the rest of ' +
+    'this brief asks for.\n\n' +
     // VERBATIM FROM THE CLAUSE THAT GENERATED THE FIRST SET, and deliberately so. The first
     // attempt at this repair reworded it too, to "holds the shape of the body part that fills it,
     // while the wearer stays invisible" — and the reference endpoint's content filter refused
@@ -406,6 +447,50 @@ function silhouetteClause(planned: PlannedAsset): string {
 }
 
 /**
+ * The bounding box of the ink, said in the two numbers verify.py check 8 actually reads.
+ *
+ * Check 8 opens the file, takes the opaque bounding box, and compares exactly `box.top` and
+ * `box.bottom` — as fractions of the frame's HEIGHT — against the slot's band. It never looks at
+ * the width, never looks at the area, and never looks at how much of the band is filled. So this
+ * sentence names the highest paint, the lowest paint, and the distance between them, and nothing
+ * else: an instruction phrased in a vocabulary the measurement cannot see is how the previous
+ * prohibition failed, and "as large as it can be" was exactly that.
+ *
+ * **An edge beats a percentage.** Where the band starts at 0.0 (`hair`) or ends at 1.0 (`feet`)
+ * the sentence names the frame's own edge instead of a number, because the top and bottom edges of
+ * the picture are things a diffusion model can locate and "80% of the way down" is not. Those are
+ * also the two slots whose failures were positional rather than dimensional, and `feet` is the one
+ * slot that has never registered a single plate.
+ *
+ * The shallow-strip sentence is added only where the box is markedly wider than it is tall, which
+ * on a 256x512 frame means `hair` and `feet`. It describes the BOX, never the item — the width
+ * figure removed in the second iteration stays removed — and it is omitted everywhere it would be
+ * near-tautological, because every extra clause here is a clause competing with the garment.
+ */
+function overlayExtent(planned: PlannedAsset): string {
+  const [top, bottom] = planned.band ?? [0, 1]
+  const pct = (value: number): string => `${Math.round(value * 100)}%`
+  const highest =
+    top <= 0.001 ? 'at the very TOP EDGE of the frame' : `${pct(top)} of the way down the frame`
+  const lowest =
+    bottom >= 0.999
+      ? 'at the very BOTTOM EDGE of the frame'
+      : `${pct(bottom)} of the way down the frame`
+  const ratio = planned.width / (planned.height * (bottom - top))
+  const strip =
+    ratio >= 1.3
+      ? ` That box is a wide shallow strip, about ${
+          Math.round(ratio * 10) / 10
+        } times as wide as it is tall.`
+      : ''
+  return (
+    `The HIGHEST paint anywhere in this picture is ${highest}, and the LOWEST paint anywhere in ` +
+    `it is ${lowest}; between those two lines the item measures exactly ${pct(bottom - top)} of ` +
+    `the picture's height.${strip}`
+  )
+}
+
+/**
  * The registration restated in the FINAL position, one sentence, per slot.
  *
  * The scene equivalent of `DARK_TAIL`, and it exists for the same measured reason: in this estate
@@ -413,14 +498,24 @@ function silhouetteClause(planned: PlannedAsset): string {
  * proved that a registration instruction placed mid-prompt is a registration instruction that gets
  * dropped. It says the band and nothing else — no style, no subject, no colour — because a tail
  * that repeats the whole brief is a tail that competes with it.
+ *
+ * **The word `large` has been deleted from it**, and that is the third iteration's whole point in
+ * one edit. The tail used to end "the item is drawn once, large, inside that band", which on a
+ * `feet` plate is an instruction to draw a boot big and a band 20% of the frame tall, in the same
+ * breath, in the most obeyed position in the prompt. It now restates the measured box instead.
  */
 function registrationTail(planned: PlannedAsset): string {
   const [top, bottom] = planned.band ?? [0, 1]
+  const pct = (value: number): string => `${Math.round(value * 100)}%`
+  const highest =
+    top <= 0.001 ? 'the very top edge of the tall frame' : `${pct(top)} of the way down the tall frame`
+  const lowest = bottom >= 0.999 ? 'its very bottom edge' : `${pct(bottom)} of the way down it`
   return (
-    `REGISTRATION, and this governs the whole image: all of the ink in this picture lies between ` +
-    `${Math.round(top * 100)}% and ${Math.round(bottom * 100)}% of the way down the tall frame, ` +
-    `measured from the top edge. The rest of the frame, above that band and below it, is bare ` +
-    `flat ${BRAND_GROUND} for its full width. The item is drawn once, large, inside that band.`
+    `REGISTRATION, and this governs the whole image: the highest paint in this picture is at ` +
+    `${highest}, the lowest paint in it is at ${lowest}, and everything between them measures ` +
+    `${pct(bottom - top)} of the picture's height. The rest of the frame is bare flat ` +
+    `${BRAND_GROUND} for its full width. The item is drawn once, at exactly that size, in exactly ` +
+    `that box.`
   )
 }
 
