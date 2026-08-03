@@ -155,6 +155,15 @@ export interface PlannedAsset {
    * the same argument `region` was already carried for, now applied to the number too.
    */
   readonly placement?: string
+  /**
+   * Avatar overlays only: how TALL the item stands, in words, as a share of the frame's height.
+   *
+   * `placement` says where the paint is and this says how much of it there is, and check 8 grades
+   * both — its two numbers are the top of the bounding box and the bottom, and the distance
+   * between them is exactly this. It is prose in `content/avatars.json` rather than derived from
+   * `band` because **a numeral in this clause gets PAINTED**: see `overlayExtent` in generate.ts.
+   */
+  readonly extent?: string
   readonly band?: readonly [number, number]
 }
 
@@ -291,6 +300,7 @@ function avatarAssets(): PlannedAsset[] {
         priority: 31,
         region: slot.region,
         placement: slot.placement,
+        extent: slot.extent,
         band: slot.band,
       })
     }
