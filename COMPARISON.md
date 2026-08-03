@@ -126,6 +126,23 @@ than an impression.
 | **Framed, bevelled game-UI artefact** | **by eye** | **Qwen**, across all three earlier sets, regardless of the ask |
 | **Recursive picture-frame grid** | **by eye** | **Qwen**, on a micro-brand icon |
 | **Named-artist pastiche** (Hokusai) | **by eye** | **Qwen**, on a micro-brand icon, from a brief naming no artist |
+| **3D bevel, specular highlight, cast shadow, plinth** | **by eye** | **Qwen**, `currency-ember` in micro-brand |
+| **Construction grid drawn INTO the artwork** | **by eye** | **Qwen**, `currency-spark` in micro-brand |
+
+**The two currency marks are the cleanest evidence in the estate, and they arrived after these
+criteria were fixed.** `micro-brand` generated `currency-ember` and `currency-spark` with both
+models on a prompt neither had seen before. Qwen returned, for the first, a bevelled 3D ring with a
+specular highlight, a cast shadow and a stone plinth; and for the second, a **ruled lattice with
+circle guides inside a drawn bounding box** — against a prompt that says, verbatim, *"no
+construction lines, no grid, no guides, no ruled margins, no border, no frame, no bounding box"*.
+
+That is the finding that matters most for reading §8 below: **the prohibition list does not move
+it.** Both defects are named in the prompt and both appeared anyway, which means a low artefact
+count on Tessera cannot be credited to `ARTEFACT_GUARD` and must be credited to the brief. It also
+predicts *where* to look: those two marks are flat, and Tessera's flat categories are the glyphs,
+the economy icons, the markers and the chrome. If the reflex is about the idiom rather than about
+Qwen, it should reappear there and be absent from the painterly sets — and that is a testable
+claim, not an impression, so §8 tests it set by set.
 
 The countable ones are in the report. The by-eye ones are tallied by hand into
 `review/compare/artefacts.json`, keyed by provider id and defect name; `compare.py` reads it if it
