@@ -15,7 +15,7 @@
     "came up, and no per-image arithmetic can express that.",
     "",
     "THE DEFECT THIS FILE EXISTS TO NOT REPEAT: brand/candidates/qwen-image-2512/DEPLOYMENT.json",
-    "records teardown.state as \"NOT TORN DOWN — STILL BILLING\". That A100 was never torn down.",
+    "records teardown.state as \"NOT TORN DOWN \u2014 STILL BILLING\". That A100 was never torn down.",
     "doc 23 section 2.3 flags it as a live cost defect and says somebody should check the standing",
     "one; this run records its own window honestly instead of inheriting the habit."
   ],
@@ -33,8 +33,8 @@
     ]
   },
   "generation": {
-    "startedAt": "2026-08-03T10:03:07Z",
-    "finishedAt": null,
+    "startedAt": "2026-08-03T10:03:07.876Z",
+    "finishedAt": "2026-08-03T14:21:00.929Z",
     "$note": [
       "The window this repository can actually measure: the first and last `generatedAt` in",
       "candidates/qwen-image-2512/MANIFEST.json. Both are read off the manifest rather than typed.",
@@ -51,17 +51,27 @@
     ]
   },
   "measured": {
-    "secondsPerGeneration": null,
-    "generations": null,
-    "$note": "Written from the manifest when the set completes; see report_deployment() in compare.py."
+    "generations": 288,
+    "wallClockHours": 4.3,
+    "secondsPerGenerationIfSerial": 53.7,
+    "$note": [
+      "wallClockHours is the span from the first generatedAt to the last, NOT the deployment's billed",
+      "life, which started earlier and is unknown here (see created.at).",
+      "",
+      "secondsPerGenerationIfSerial is wall clock divided by images and is NOT this model's latency.",
+      "The measured per-image latency on this endpoint is ~15.4s; the figure below is far larger",
+      "because the candidate spent most of the window IDLE waiting for the reference set to record",
+      "prompts it could replay. The gap between the two numbers IS the finding: on this pairing the",
+      "per-hour deployment bills at the pace of the slowest model in the comparison."
+    ]
   },
   "teardown": {
-    "state": "OWNER-HELD — the owner is holding this deployment open for this run and will delete it themselves once both sets exist",
+    "state": "READY FOR TEARDOWN \u2014 both sets are complete (288 generated + 104 derived per model) and nothing further will be sent to this endpoint. The owner deletes it.",
     "at": null,
     "$note": [
       "This run does not tear the deployment down, because it was not this run that brought it up.",
       "What it owes the owner instead is a completion signal the moment the last asset lands, so",
-      "the deployment is not billing for a run that has already finished — which is exactly the",
+      "the deployment is not billing for a run that has already finished \u2014 which is exactly the",
       "failure mode the brand run's file records."
     ]
   }

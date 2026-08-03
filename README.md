@@ -151,7 +151,47 @@ previous run in this estate survived exactly that.
 **A candidate can only generate an asset the reference has already recorded** (§5.2), so the
 candidate run chases the reference rather than racing it.
 
-## 8. CI
+## 8. Known defects in this set, stated rather than discovered later
+
+Both sets are complete — **288 generated + 104 derived = 392 per model** — and `verify.py` passes
+every integrity check on both: checksums, dimensions, C2PA measured off the bytes, `assetCount`,
+no orphan files, **0 transposed assets across all 68 non-square generations** and **0 prompt
+disagreements across all 392 entries in both sets**. What follows is what is *not* right.
+
+**1. The paper doll does not composite. This is the big one.**
+`verify.py` check 8 measures every avatar overlay's opaque bounding box against its slot's band.
+**32 of FLUX's 40 overlays and 40 of 40 of Qwen's are misregistered.** The garments themselves are
+excellent — they are among the best sprite work in the set — but each is drawn as its own centred
+subject filling its frame rather than as a plate registered to the shared silhouette, so a `feet`
+plate is a pair of legs spanning 0.03–0.91 of the frame instead of boots in the bottom eighth.
+
+The cause is in the brief, not the models: the registration instruction is a *prohibition* ("draw
+only the named region, leave the rest empty") at the end of a long prompt, and both models honoured
+the positive half and ignored the negative half identically. **When two independent models fail one
+instruction the same way, the instruction is the defect.** The fix is to restate the region
+positively and regenerate the 40 overlays per model; the estate's `positive` prompt dialect exists
+for exactly this and is the right instrument. Until then the 8 avatar bases are usable and the 40
+overlays are not, so §6.3's 131,072 distinct avatars is a design claim this asset set does not yet
+deliver.
+
+**2. The scene ground clause contradicts the daylight ward descriptions.**
+`content/wards.json` defines `day` as "flat even daylight, high sun" while `SCENE_GROUND_CLAUSE`
+demands the frame's edges "fall away into that darkness rather than into grey, white or pale blue".
+Both are in the same prompt. Both models resolved it the same way and correctly for the subject —
+`saltflat-day` has a sky-blue horizon — so `verify.py` reads time of day off the content exactly as
+the prompt does and exempts the `-day` backdrops. **That exemption is a content defect made
+visible, not a check softened to go green**, and it should be deleted once the clause is fixed.
+
+**3. Two small artefacts.** `icons/royalty` (FLUX) drew a **dollar sign** into the coin — wrong
+twice, since nothing is meant to be written in any image here and a fiat symbol is specifically
+wrong in an estate whose payments are crypto-native and whose unit is EMBER. `terrain/grove-ground`
+and `terrain/terrace-water` (FLUX) carry a thin drawn border the plate prompt forbids; both are
+still cuttable because `project_iso.py` takes an interior region.
+
+**4. `glyphs/category-flooring` (FLUX)** falls below the accent floor at 0.19% against 1.0%. A
+genuine single-asset prompt-adherence miss, left red rather than excused.
+
+## 9. CI
 
 `.github/workflows/ci.yml` runs secret hygiene and `verify.py`, plus a check that every file under
 `assets/` has a manifest entry — the gap that let two favicons land in `micro-emberkin-assets` with
