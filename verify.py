@@ -120,29 +120,36 @@ SLOT_BANDS = {
 SLOT_MARGIN = 0.04
 
 
-def is_daylight(asset: dict) -> bool:
-    """True for a backdrop whose time of day is `day`, which the darkness ceiling cannot apply to.
-
-    THIS EXEMPTION IS A CONTENT DEFECT MADE VISIBLE, not a check being softened to go green, and
-    the distinction matters enough to write down.
-
-    `content/wards.json` defines `day` as "flat even daylight, high sun, the ward's own colours at
-    full strength". `generate.ts`'s SCENE_GROUND_CLAUSE simultaneously demands that "the four outer
-    edges of the frame fall away into that darkness rather than into grey, white or pale blue".
-    **Those two sentences are in the same prompt and they contradict each other**, and both models
-    resolved the contradiction the same way — `saltflat-day` came back with a sky-blue horizon and
-    `wharf-day` with a pale estuary, which is the correct reading of the subject and a violation of
-    the clause.
-
-    So the check reads the time of day off the content, exactly as the prompt does, and holds only
-    the dusk and night backdrops to the ceiling. The daylight ones are not being excused: the real
-    defect is in the brief, it is recorded in README §9, and it must be fixed in the clause before
-    any of these sixteen are ever regenerated — at which point this exemption should be deleted
-    rather than kept.
-    """
-    if asset["set"] != "backdrop":
-        return False
-    return asset["slug"].endswith("-day")
+# THE `is_daylight` EXEMPTION USED TO LIVE HERE, AND IT HAS BEEN DELETED.
+#
+# It skipped the scene darkness ceiling for the eight `-day` ward backdrops, because
+# `content/wards.json` defined `day` as "flat even daylight, high sun" while generate.ts's
+# SCENE_GROUND_CLAUSE demanded that all four edges "fall away into that darkness rather than into
+# grey, white or pale blue" — two sentences of one prompt that contradicted each other. README §8
+# recorded it as a content defect made visible rather than a check softened to go green, and said
+# it should be deleted once the clause was fixed. The clause is fixed: the darkness requirement is
+# now conditional on the light the scene is described as having, and it names the daylight case
+# instead of forbidding it. So the ceiling now runs on all sixteen backdrops, and what it finds it
+# reports.
+#
+# WHAT DELETING IT REVEALED, measured rather than predicted, and it is not what README §8 said:
+#
+#   flux-2-pro       saltflat-day  edge luma 0.416  #64b9c9   over the 0.12 ceiling
+#                    wharf-day     edge luma 0.479  #a9bcb9   over the 0.12 ceiling
+#                    the other six day backdrops   0.000-0.007, comfortably under
+#   qwen-image-2512  ALL EIGHT day backdrops       0.001-0.007, comfortably under
+#
+# README §8 claimed "both models resolved it the same way". THEY DID NOT. FLUX painted daylight on
+# two of eight and Qwen painted the dark clause on eight of eight — its `saltflat-day` corners are
+# #1c120a, a near-black, under a brief that says "high sun". So the exemption was written for a
+# symmetry that was never there: it was covering two FLUX assets and nothing else, while removing
+# the only check that would have noticed Qwen never painting a daylight sky at all.
+#
+# The two are left RED rather than excused, which is this repository's standing habit for a
+# genuine prompt-adherence miss (README §8 item 4). They are also the two most worth regenerating
+# against the fixed clause, because it is the clause that now tells a model what a high sun does at
+# the top edge of a frame — and `wharf-day`'s #a9bcb9 is a desaturated pale band, which is the
+# failure the clause guards against rather than the daylight it now permits.
 
 
 def hex_to_rgb(value: str) -> tuple[int, int, int]:
@@ -562,7 +569,7 @@ def verify_set(provider, document: dict, wanted: set[str]) -> list[str]:
                         "so this is a mount, a border or a vignette rather than a material, and "
                         "project_iso.py will cut that band into the world's ground"
                     )
-            elif corner_luma > MAX_SCENE_EDGE_LUMA and not is_daylight(asset):
+            elif corner_luma > MAX_SCENE_EDGE_LUMA:
                 conformance.append(
                     f"scene edges at {rgb_to_hex(corners)} are too light (luma {corner_luma:.3f}, "
                     f"ceiling {MAX_SCENE_EDGE_LUMA})"

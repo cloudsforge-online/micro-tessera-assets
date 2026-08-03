@@ -189,12 +189,40 @@ const DARK_TAIL =
   'It is NOT white, NOT cream and NOT grey. The artwork floats free on it with nothing beneath ' +
   'it, and is the only bright thing in the frame.'
 
-/** The scene equivalent: a picture cannot have a flat ground, but it can refuse to be pale. */
+/**
+ * The scene equivalent: a picture cannot have a flat ground, but it can refuse to be pale.
+ *
+ * **THIS CLAUSE USED TO CONTRADICT ITS OWN CONTENT, AND THIS IS THE REPAIR.** It read "the four
+ * outer edges of the frame fall away into that darkness rather than into grey, white or pale
+ * blue" — unconditionally, for every scene. `content/wards.json` simultaneously defines `day` as
+ * "flat even daylight, high sun, the ward's own colours at full strength", and eight of the
+ * sixteen ward backdrops are day. Both sentences went into the same prompt. A high sun over an
+ * immense salt pan has a pale blue sky at the top edge of the frame; the clause forbade it.
+ *
+ * verify.py carried an `is_daylight` exemption that skipped the darkness ceiling for the eight
+ * `-day` backdrops, and README §8 was explicit that this was a content defect made visible rather
+ * than a check softened to go green, and that it should be deleted once the clause was fixed. It
+ * has been. The exemption is gone.
+ *
+ * The repair does not delete the darkness requirement, which is load-bearing — it is the clause
+ * the brand run's mid-grey taupe first image was written against. It makes it CONDITIONAL ON THE
+ * LIGHT THE SCENE IS DESCRIBED AS HAVING, which is the thing the clause should always have been
+ * conditional on, and it names both cases explicitly so the model is not left to arbitrate
+ * between two sentences of its brief. The guard that actually mattered — that an edge is never a
+ * flat pale wash belonging to no part of the scene — is kept and sharpened, because that, and not
+ * "an edge is dark", is what the failure looked like.
+ */
 const SCENE_GROUND_CLAUSE =
-  'The darkest values in this picture are a warm near-black ash, hex ' +
-  `${BRAND_GROUND}, and the four outer edges of the frame fall away into that darkness rather ` +
-  'than into grey, white or pale blue. Draw only the picture: no border, no frame, no letterbox ' +
-  'bars, no drawn vignette ring, no user interface, no logo and no signature.'
+  'This picture is anchored at the dark end of its range: its darkest values are a warm ' +
+  `near-black ash, hex ${BRAND_GROUND}, and that value is really present in the frame — in the ` +
+  'deep shadows, the openings and the undersides. The painting runs corner to corner, and the ' +
+  "four outer edges carry the scene's own material at full strength, lit by the light this scene " +
+  'is described as having: at dusk and at night that means the edges fall away into the ' +
+  'near-black ash, and under a high sun it means the edges are sky, ground and structure painted ' +
+  'in their own colours at full saturation. What an edge is never made of is a flat pale wash, a ' +
+  'grey haze, a white fog, a bleached band, or a lightened corner that belongs to no part of the ' +
+  'scene. Draw only the picture: no border, no frame, no letterbox bars, no drawn vignette ring, ' +
+  'no user interface, no logo and no signature.'
 
 const NO_TEXT =
   'Nothing is written anywhere in this image: no text, no lettering, no numerals, no caption, no ' +
@@ -270,10 +298,46 @@ function footprintClause(footprint: string): string {
 }
 
 /**
- * The paper-doll registration clause. verify.py check 7 measures what this asks for.
+ * The paper-doll registration clause. verify.py check 8 measures what this asks for.
  *
- * The silhouette itself is read from `content/avatars.json` rather than restated here, so the
- * prompt and the engine cannot disagree about where a hat goes.
+ * The silhouette, the region, the prose placement and the band are all read from
+ * `content/avatars.json` rather than restated here, so the prompt and the engine cannot disagree
+ * about where a hat goes.
+ *
+ * **THIS CLAUSE IS THE REPOSITORY'S ONE MEASURED PROMPT DEFECT, AND THIS IS THE REPAIR.** The
+ * first run of these 40 overlays put 32 of FLUX's and 40 of Qwen's outside their slot's band. The
+ * clause then read `Draw ONLY <region>` followed by "everything outside the named part of the
+ * frame is empty" and four `do not`s — a positive half naming the garment and a NEGATIVE half
+ * naming where the ink may not go. Both models drew the garment beautifully and both ignored the
+ * negative half, identically. When two independent models fail one instruction the same way, the
+ * instruction is the defect.
+ *
+ * Two things changed, and only these two, so that what fixed it is attributable:
+ *
+ *  1. **The region is stated positively**, by the method `dialects.json`'s `positive` dialect
+ *     documents for the estate's briefs: a forbidden REGION becomes a measurement of the region
+ *     that IS drawn. "Everything below the jaw is empty" becomes "every drawn pixel sits inside a
+ *     band running from the top edge down to three tenths of the frame's height". No word of the
+ *     negation vocabulary survives in this clause.
+ *  2. **It is restated once, in the final position**, as `registrationTail`. Position beats
+ *     length — the Emberkin finding that `DARK_TAIL` already exists for. The old clause sat third
+ *     of eight parts and was followed by four paragraphs of prohibitions about ground, frames,
+ *     lettering and darkness; the one instruction that had to survive to the end was the one
+ *     buried in the middle.
+ *
+ * WHAT IS DELIBERATELY UNCHANGED is everything else in the brief. `AVATAR_STYLE`, the subject,
+ * `paletteClause`, `FLAT_GROUND_CLAUSE`, `ARTEFACT_GUARD`, `NO_TEXT` and `DARK_TAIL` are byte for
+ * byte what they were, prohibitions and all. The experiment is therefore about the registration
+ * instruction rather than about the prompt's style, which is what makes the before-and-after
+ * bounding boxes worth quoting.
+ *
+ * THE FAILURE MODE TO WATCH is the one the estate's `positive` pilot found and reported against
+ * itself: restating things positively lengthens them, and a long positive description crowds out
+ * the subject — that pilot regressed "idea unrecognisable" from 2/15 to 8/15. A plate correctly
+ * registered but no longer recognisably a boot is a different failure, not a fix. Hence the
+ * sentence below that spends its words on the garment being LARGE, filling its band, and
+ * immediately recognisable: the band is a constraint on WHERE the ink goes, never on how much
+ * there is of it.
  */
 function silhouetteClause(planned: PlannedAsset): string {
   const shared = AVATARS.silhouette as string
@@ -284,14 +348,36 @@ function silhouetteClause(planned: PlannedAsset): string {
     )
   }
   return (
-    `This plate is an OVERLAY that will be composited onto a base figure drawn to a fixed shared ` +
-    `silhouette: ${shared}. Draw ONLY ${planned.region}. The garment or item is drawn exactly ` +
-    'where it would sit on that figure, at exactly that scale and in exactly that position, with ' +
-    'no body, no head, no face, no hands and no feet drawn unless they are the named part. ' +
-    'Everything outside the named part of the frame is empty flat background and nothing is ' +
-    'drawn in it at all. Do not draw the whole figure, and do not draw a mannequin, a hanger, a ' +
-    'rail or a folded garment: draw the item as WORN, in its worn position, with the wearer ' +
-    'invisible.'
+    'This plate is ONE LAYER of a paper doll. It will be composited onto a base figure drawn to a ' +
+    `fixed shared silhouette: ${shared}. This plate shows ${planned.region}, as it sits on that ` +
+    'figure, at that scale and in that position.\n\n' +
+    `EVERY DRAWN PIXEL IN THIS IMAGE SITS INSIDE ${(planned.placement ?? '').toUpperCase()}. ` +
+    `Above that band and below it, the frame is flat ${BRAND_GROUND} background for its full ` +
+    'width, out to all four edges. Inside the band the item is drawn LARGE: it fills the band ' +
+    'from the top of the band to the bottom of it and about two thirds of the frame width, ' +
+    'centred left to right, and it is immediately recognisable for what it is. It is the single ' +
+    'subject of this image and it is drawn with all the detail the rest of this brief asks for.\n\n' +
+    'The item is shown AS WORN and holds the shape of the body part that fills it, while the ' +
+    'wearer stays invisible: the item\'s own outline is the only outline anywhere in the frame.'
+  )
+}
+
+/**
+ * The registration restated in the FINAL position, one sentence, per slot.
+ *
+ * The scene equivalent of `DARK_TAIL`, and it exists for the same measured reason: in this estate
+ * the last paragraph of a prompt is the one a diffusion model reliably obeys, and the first run
+ * proved that a registration instruction placed mid-prompt is a registration instruction that gets
+ * dropped. It says the band and nothing else — no style, no subject, no colour — because a tail
+ * that repeats the whole brief is a tail that competes with it.
+ */
+function registrationTail(planned: PlannedAsset): string {
+  const [top, bottom] = planned.band ?? [0, 1]
+  return (
+    `REGISTRATION, and this governs the whole image: all of the ink in this picture lies between ` +
+    `${Math.round(top * 100)}% and ${Math.round(bottom * 100)}% of the way down the tall frame, ` +
+    `measured from the top edge. The rest of the frame, above that band and below it, is bare ` +
+    `flat ${BRAND_GROUND} for its full width. The item is drawn once, large, inside that band.`
   )
 }
 
@@ -330,6 +416,9 @@ export function promptFor(planned: PlannedAsset): string {
         ARTEFACT_GUARD,
         NO_TEXT,
         DARK_TAIL,
+        // LAST, and only on an overlay. A base occupies the whole frame by definition and has no
+        // band to be held to; giving it one would be asking for the defect rather than fixing it.
+        planned.style === 'avatar-overlay' ? registrationTail(planned) : '',
       )
       break
     case 'glyph':

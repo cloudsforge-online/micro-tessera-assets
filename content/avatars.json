@@ -8,9 +8,28 @@
     "of assets in this repository exposed to Qwen's transposed `size`.",
     "",
     "REGISTRATION IS THE FAILURE THAT HIDES. Every overlay is generated against the same base",
-    "silhouette, stated in the prompt below and checked by verify.py check 7 as a bounding-box",
+    "silhouette, stated in the prompt below and checked by verify.py check 8 as a bounding-box",
     "containment test. A misregistered overlay is invisible in a contact sheet and obvious in play —",
-    "which is the definition of a check worth automating."
+    "which is the definition of a check worth automating.",
+    "",
+    "AND IT DID HIDE, ONCE. The first run of these 40 overlays put 32 of FLUX's and 40 of Qwen's",
+    "outside their band. The `region` strings then read like 'the head only — the top quarter of",
+    "the frame; everything below the jaw is empty': a positive half naming the part, and a NEGATIVE",
+    "half naming where the ink may not go. Both models honoured the first half and dropped the",
+    "second, identically, and when two independent models fail one instruction the same way the",
+    "instruction is the defect rather than the models.",
+    "",
+    "So `region` is now positive throughout, and it is joined by two fields that say the same thing",
+    "in the two registers a diffusion model and a checker respectively understand:",
+    "",
+    "  band       the AIM, as a fraction of the frame's height, top and bottom. Numbers, for code.",
+    "  placement  that same band as prose, because a model is asked in words and 0.8 is not a word.",
+    "",
+    "`band` IS NOT THE TOLERANCE, and the difference is deliberate. verify.py's SLOT_BANDS is the",
+    "tolerance — wider, plus a margin — and it is the arbiter. These are what the prompt AIMS at,",
+    "set inside it, so a plate that lands near its aim passes with room rather than on the line.",
+    "Two numbers for two purposes is not the drift defect; one number doing both jobs would mean",
+    "either a prompt that asks for the edge of what is allowed or a check that only accepts perfection."
   ],
   "silhouette": "a standing adult figure occupying the centre of a tall narrow frame, head near the top with a small margin above it, feet just above the bottom edge, arms at the sides, the whole figure about two thirds of the frame width and centred left to right",
   "builds": [
@@ -27,7 +46,9 @@
     {
       "id": "hair",
       "name": "Hair",
-      "region": "the head only — the top quarter of the frame; everything below the jaw is empty",
+      "region": "the head — the top three tenths of the frame",
+      "band": [0.0, 0.3],
+      "placement": "a horizontal band across the top of the frame, running from the very top edge down to three tenths of the frame's height",
       "items": [
         { "slug": "crop", "subject": "a short cropped haircut, close at the sides" },
         { "slug": "braid", "subject": "a single thick braid falling over one shoulder" },
@@ -42,7 +63,9 @@
     {
       "id": "top",
       "name": "Top",
-      "region": "the torso and arms — from the shoulders to the hips; the head and legs are empty",
+      "region": "the torso and arms, from the shoulders to the hips",
+      "band": [0.14, 0.62],
+      "placement": "a horizontal band across the upper middle of the frame, running from one seventh of the frame's height down to five eighths of it",
       "items": [
         { "slug": "tunic", "subject": "a belted knee-length tunic with three-quarter sleeves" },
         { "slug": "jacket", "subject": "a short buttoned jacket with turned cuffs" },
@@ -57,7 +80,9 @@
     {
       "id": "legs",
       "name": "Legs",
-      "region": "the hips to the ankles; the torso, head and feet are empty",
+      "region": "the hips to the ankles",
+      "band": [0.44, 0.9],
+      "placement": "a horizontal band across the lower middle of the frame, running from a little under halfway down the frame to nine tenths of its height",
       "items": [
         { "slug": "trousers", "subject": "straight-cut work trousers, slightly loose" },
         { "slug": "long-skirt", "subject": "a long plain skirt falling to the ankle" },
@@ -72,7 +97,9 @@
     {
       "id": "feet",
       "name": "Feet",
-      "region": "the ankles and feet only — the bottom eighth of the frame; everything above is empty",
+      "region": "the ankles and feet — the bottom fifth of the frame",
+      "band": [0.8, 1.0],
+      "placement": "a horizontal band across the bottom of the frame, running from four fifths of the frame's height down to the very bottom edge",
       "items": [
         { "slug": "boots", "subject": "ankle-height laced leather boots" },
         { "slug": "sandals", "subject": "flat strapped sandals" },
@@ -87,7 +114,9 @@
     {
       "id": "held",
       "name": "Held",
-      "region": "one hand at the figure's side — the middle of the frame at hip height; the rest of the frame is empty",
+      "region": "the item carried in one hand at the figure's side, at hip height in the middle of the frame",
+      "band": [0.32, 0.82],
+      "placement": "a horizontal band across the middle of the frame at hip height, running from a third of the frame's height down to four fifths of it",
       "items": [
         { "slug": "satchel", "subject": "a leather satchel hanging from a long strap" },
         { "slug": "lantern", "subject": "a small lit lantern carried by its bail handle" },

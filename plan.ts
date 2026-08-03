@@ -146,8 +146,16 @@ export interface PlannedAsset {
   readonly priority: number
   /** `1x1` or `2x2` on a seed object. A FIELD, never something the model is asked to infer. */
   readonly footprint?: string
-  /** Avatar overlays only: which part of the shared silhouette this plate is allowed to occupy. */
+  /** Avatar overlays only: which part of the shared silhouette this plate occupies. */
   readonly region?: string
+  /**
+   * Avatar overlays only: that same region as prose the model is actually asked in, and as the
+   * pair of frame-height fractions the prose is derived from. Both come from
+   * `content/avatars.json`, so the prompt and the engine cannot disagree about where a hat goes —
+   * the same argument `region` was already carried for, now applied to the number too.
+   */
+  readonly placement?: string
+  readonly band?: readonly [number, number]
 }
 
 /** A derivative, declared before it exists so 288 + 104 = 392 is checkable up front. */
@@ -282,6 +290,8 @@ function avatarAssets(): PlannedAsset[] {
         source: 'docs/ecosystem/23-tessera.md §2.8; content/avatars.json',
         priority: 31,
         region: slot.region,
+        placement: slot.placement,
+        band: slot.band,
       })
     }
   }
