@@ -237,6 +237,137 @@ measured off the bytes on both and recorded as a disclosure fact.
 
 ## 8. The verdict
 
-*Written after the sets existed, against the criteria above and no others.*
+*Written after both sets existed, against the criteria above and no others.*
 
-<!-- FILLED IN AFTER GENERATION -->
+**FLUX 2 Pro, decisively — and this time the brief was not the reason.**
+
+That is the same verdict the three earlier runs reached, and §7.0 promised not to let it carry over.
+It did not: Tessera is painterly on purpose, the register gap closed almost completely, and Qwen
+still lost. The finding worth having is not *who won* but *what closed and what did not*.
+
+### 8.1 The register gap closed. It was never the problem.
+
+The measured prediction in §7.0 was right, and it is the one place Qwen improved dramatically:
+
+| Brief | Qwen KB per megapixel, against FLUX |
+| --- | --- |
+| micro-brand, flat vector | **7.1×** |
+| the two sibling painterly game sets | **2.6×** |
+| **Tessera, painterly** | **1.60×** (1038 against 647) |
+
+So the challenger was, for the first time, answering in roughly the right idiom. Its *coherence*
+numbers are also genuinely competitive and in two places better than the reference's: accent hue
+error spread **6.9° against 9.2°**, and ground luma spread **0.070 against 0.125**. On criterion 2
+read purely as arithmetic, Qwen is the tidier of the two.
+
+**And it lost anyway, on criterion 1, by margins that no amount of criterion 2 can offset.** The
+brief was never what was holding it back.
+
+### 8.2 Criterion 1a and 1c — prompt adherence, where it was decided
+
+| Measured over the whole category | FLUX | Qwen |
+| --- | --- | --- |
+| Terrain plates that are a MATERIAL, not a scene (of 32) | **32** | **8** |
+| Flat glyphs and icons that are flat vector art (of 40) | **40** | **0** |
+
+Those two rows are the verdict.
+
+**The plates.** The brief asks for a flat overhead material sheet, evenly lit, no horizon, no
+perspective, no buildings, nothing standing on it, texture running past all four edges. FLUX
+returned 32 of 32 exactly that. Qwen returned **24 landscapes**: `ashfield-path` is a lit building
+under a sky, `glasshouse-ground` is an interior room with a framed picture on the wall,
+`undercroft-water` is a street receding to a vanishing point. They are frequently *beautiful* — as
+concept art `ashfield-path` is the best single image either model produced in this run — and they
+are unusable, because `project_iso.py` cuts tiles out of them and a tile with a horizon in it puts
+a horizon on the ground. **Each failed plate costs the 12 tiles cut from it**, which is why this
+criterion was written to be scored per plate.
+
+**The flat sets.** This is not a near miss. Asked for *"flat geometric vector, one uniform stroke
+weight, legible when shrunk to 24 pixels, no gradients, no photographic texture, no bevels, no 3D,
+no photo-realism"*, Qwen returned **40 photographs** — portraits of people, cars, street scenes.
+`icons/available` is a man standing in a street; `icons/dwell` is a woman lying in grass in
+sunglasses. Not one of the 40 is an icon. FLUX returned 40 clean glyphs, including the one that
+carries a real accessibility requirement: `pending` is a hollow open ring and `available` is a
+solid filled disc, so the two balances §2.12 puts side by side are distinguishable at 16 px by
+shape rather than hue.
+
+### 8.3 The measurements that flatter the loser, and why they are reported anyway
+
+Three rows in `compare.py` favour Qwen and are all artefacts of measuring a photograph:
+
+- **"below accent floor": FLUX 47, Qwen 31.** Accent coverage counts pixels within 30° of
+  `#6d9a49`. Green foliage in a photograph counts. Qwen scores well on an accent check by
+  photographing a hedge.
+- **"marks under 50% retention at 16px": FLUX 25, Qwen 7.** A busy photograph retains contrast
+  under downscale better than a clean glyph with generous negative space. It retains it as mush.
+- **"ground off-target": FLUX 54, Qwen 22.** Measured before normalisation; both sets normalise.
+
+This is exactly why COMPARISON.md separated the arithmetic from criterion 1a, *before* the images
+existed. **A model can win every measurable row on this page and still have drawn the wrong thing
+288 times**, and the only defence against that is fixing in advance that "is it the idea?" is
+judged by eye and outranks the arithmetic. Had the criteria been written afterwards, these three
+rows are precisely the ones that would have been promoted.
+
+### 8.4 Criterion 4, and the defect that is mine rather than either model's
+
+The full tally is `review/compare/artefacts.json`, with its scope stated. The headline is §8.2.
+Two entries deserve calling out.
+
+**`ARTEFACT_GUARD` did nothing, and this run is more evidence for that than micro-brand's.** The
+clause names the frame, the bevel, the recursion and the pastiche and forbids them, in both sets'
+prompts, byte-identically. Qwen returned `chrome/mark` and `chrome/capsule` as bevelled 3D stone
+objects with specular highlights, cast shadows, a rocky plinth and a volumetric light shaft — the
+shaft being separately forbidden by name in the same prompt — and put a framed picture on a wall in
+four assets, against a clause reading *"do not draw a framed picture hanging on a wall"*. The
+prohibition list does not move it. **A low artefact count for Qwen anywhere in this run is
+therefore attributable to the brief, never to the guard.**
+
+**And one defect is neither model's fault: 32 of FLUX's 40 avatar overlays and 40 of 40 of Qwen's
+are misregistered.** `verify.py` check 8 measures it and it is the largest single defect count on
+either side. But look at what was actually asked: the prompt tells the model to draw *only* the
+named region and leave the rest empty — a prohibition, phrased negatively, at the end of a long
+prompt. Both models did the positive part beautifully (the garments are the best sprite work in the
+set) and ignored the negative part identically. **When two independent models fail the same
+instruction the same way, the instruction is the defect.** The paper doll does not composite today,
+and that is recorded rather than hidden — see README §9.
+
+### 8.5 Cost, in each model's own unit, never combined
+
+- **FLUX 2 Pro: 868.5 provider image units** over 288 generations, 3.02 per image, 104 derivatives
+  free. 490 retries and 459 failed attempts, of which the overwhelming majority are `429
+  RateLimitReached` on a shared serverless endpoint — wire contention, not output quality (§5).
+- **Qwen-Image 2512: deployment-hours**, recorded in
+  `candidates/qwen-image-2512/DEPLOYMENT.json`. **No per-image figure exists or is invented**: the
+  endpoint returns `quality` and `usage` as null, so there is no per-image signal at all.
+
+**The operational finding is worth more than either number.** The candidate ran on dedicated
+hardware at ~15.4 s per image and was **idle for most of its billed life**, because a candidate may
+only generate an asset whose prompt the reference has already recorded, and the reference was a
+throttled shared endpoint delivering ~1.5 images per minute. **On this pairing the per-hour
+deployment's bill is set by the slowest model in the comparison.** Any future run should finish the
+reference set first and bring the per-hour deployment up only then.
+
+### 8.6 What this does and does not license
+
+**Use FLUX for this estate's art.** Nothing here disturbs that.
+
+**Do not read this as "Qwen is worse".** Read it as the far narrower and more useful claim the
+criteria actually support: *Qwen will not accept a constraint.* It answered the painterly brief in
+the right register, with tidier hue and ground consistency than the reference, and produced
+individual images that are better paintings than anything FLUX returned. It then ignored every
+instruction about what the image had to *be* — a material and not a scene, a glyph and not a
+photograph, a region and not a figure, flat and not bevelled. Every one of its losses is a refused
+constraint and none is a failure of craft.
+
+That has a concrete consequence: **the estate should stop concluding this from prohibition-heavy
+briefs.** Both the currency marks and this run show the same thing, and the sibling repositories
+have already built the instrument to test it properly — the `positive` prompt dialect, which
+restates prohibitions as positives and refuses to send a prompt that still carries negation
+vocabulary. Tessera has 288 recorded literal prompts and a checked pipeline, which makes it the
+best corpus in the estate to run that experiment against.
+
+**Two caveats that cut against this verdict, restated so they are not lost:** §7.1 — this set
+generates no lettering at all, so the comparison is blind to Qwen's one previously measured win
+(9/9 against FLUX rendering a wordmark as *"Home on the Ridge"*), and FLUX invented a dollar sign
+on `icons/royalty` here. And §7.4 — neither set was re-rolled by eye, so both are single-pass
+output.

@@ -1,0 +1,62 @@
+{
+  "$comment": [
+    "The by-eye artefact tally. COMPARISON.md §4 fixes this taxonomy and this procedure BEFORE the",
+    "sets existed; this file is the result of following it.",
+    "",
+    "Procedure followed: review/compare/compare-<set>.png puts the same asset from both models in",
+    "one row, and each row was scored left to right. Never one model's whole set followed by the",
+    "other's — that is N separate judgements each made against a memory of the last.",
+    "",
+    "compare.py reads this file if it exists and prints 'no verdict' if it does not, rather than",
+    "printing zero. A missing tally and a tally of zero are different claims."
+  ],
+  "$scope": [
+    "ALL 32 terrain plates per model, ALL 40 flat assets per model (24 glyphs + 16 economy icons),",
+    "all 8 chrome entries per model, the 8 `flooring` seed objects per model, and 6 avatar overlays",
+    "per model. That is 94 of 288 generated assets per model, chosen as the categories the fixed",
+    "criteria predicted would separate the models: the flat sets (criterion 1a and the framing",
+    "reflex), the plates (criterion 1c) and the overlays (check 8).",
+    "",
+    "IT IS NOT THE WHOLE SET, and the counts below must not be read as if it were. Where a defect",
+    "is exhaustively counted over a whole category the category is named in the key. The 96 seed",
+    "objects, 24 structure parts, 16 backdrops, 12 markers, 8 Kiln assets and 6 splashes were seen",
+    "in contact sheets but not scored defect by defect, because the verdict was already decided by",
+    "the categories that were, and spending another hour scoring would not have changed it."
+  ],
+  "flux-2-pro": {
+    "plate came back a landscape (of 32)": 0,
+    "photographic instead of flat vector (of 40)": 0,
+    "framed, bevelled game-UI artefact": 0,
+    "3D bevel, specular, cast shadow, plinth": 0,
+    "recursive picture-frame grid or framed picture in the art": 0,
+    "construction grid drawn into the artwork": 0,
+    "named-artist pastiche": 0,
+    "inset duplicate": 0,
+    "invented lettering": 1,
+    "nameplate or card frame": 0,
+    "drawn border or frame on a plate": 2,
+    "overlay misregistered (of 40, measured by verify.py check 8)": 32
+  },
+  "qwen-image-2512": {
+    "plate came back a landscape (of 32)": 24,
+    "photographic instead of flat vector (of 40)": 40,
+    "framed, bevelled game-UI artefact": 2,
+    "3D bevel, specular, cast shadow, plinth": 2,
+    "recursive picture-frame grid or framed picture in the art": 4,
+    "construction grid drawn into the artwork": 0,
+    "named-artist pastiche": 0,
+    "inset duplicate": 1,
+    "invented lettering": 1,
+    "nameplate or card frame": 0,
+    "drawn border or frame on a plate": 0,
+    "overlay misregistered (of 40, measured by verify.py check 8)": 40
+  },
+  "$notes": {
+    "flux invented lettering": "icons/royalty drew a dollar sign into the coin. Small, but wrong twice over: the brief asked for a coin with a return arrow and says nothing is written anywhere in the image, and a fiat currency symbol is specifically wrong in an estate whose payments are crypto-native and whose unit is EMBER denominated in Sparks.",
+    "flux drawn border": "terrain/grove-ground and terrain/terrace-water carry a thin pale frame around the material. The plate prompt forbids a border by name. Both are still cuttable — project_iso.py takes a region from the interior — but they are defects and are counted.",
+    "qwen invented lettering": "glyphs/category-storage returned garbled pseudo-text ('hossSlegh2spea... o the meture ans wey cztaagod') against a clause saying nothing is written anywhere in the image. Worth recording precisely because lettering was Qwen's one clean win across the three earlier runs, 9/9 correct; asked for no lettering at all, it produced some.",
+    "qwen framed picture": "glasshouse-ground and kilnyard-verge each contain a framed picture hanging on a wall; grove-water contains inset framed thumbnail panels; keyart/wordmark-ground contains a framed picture. The prompt says, verbatim, 'do not draw a framed picture hanging on a wall'.",
+    "qwen bevel": "chrome/mark and chrome/capsule are the two generated chrome assets and both came back as bevelled 3D stone objects with specular highlights, cast shadows, a rocky plinth and a volumetric light shaft — against a brief demanding flat geometric vector, flat fills only, no gradients, no bevels, no drop shadows, no glow, no 3D. This is the same defect micro-brand measured on currency-ember, reproduced independently here.",
+    "overlay misregistration": "Counted for BOTH models and the highest single defect count on either side. Measured rather than eyeballed — verify.py check 8. It is a defect of the BRIEF as much as of the models: see COMPARISON.md §8.4."
+  }
+}
