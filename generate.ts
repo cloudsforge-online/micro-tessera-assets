@@ -144,6 +144,22 @@ const AVATAR_STYLE =
   'world, drawn as one member of an existing family of character plates. Flat frontal game-sprite ' +
   'rendering with no perspective distortion, no foreshortening and no dynamic pose.'
 
+/**
+ * The same style, for an OVERLAY rather than a base, and the difference is two nouns.
+ *
+ * `AVATAR_STYLE` opens "a single CHARACTER PLATE ... drawn as one member of an existing family of
+ * CHARACTER PLATES", in the first sentence of the prompt, which is the most obeyed position there
+ * is. On a base that is exactly right. On an overlay it is an instruction to draw a character, and
+ * it was being sent to all 40 overlays alongside a clause asking for a garment in a band — the
+ * same competition `silhouetteClause` above describes, in the one position that outranks the rest
+ * of the brief. A wardrobe plate is not a character plate and is no longer told that it is.
+ */
+const OVERLAY_STYLE =
+  `A single item of clothing or equipment painted in ${PAINTERLY}, for the wardrobe of a ` +
+  'paper-doll avatar in an isometric world, drawn as one member of an existing family of wardrobe ' +
+  'plates. Flat frontal game-sprite rendering with no perspective distortion, no foreshortening ' +
+  'and no dynamic pose.'
+
 /** Flat chrome, glyphs and icons: the estate's icon discipline, as `studio/src/prompt.ts` puts it. */
 const GLYPH_STYLE =
   'A single piece of user-interface artwork for a video game, drawn as one member of an existing ' +
@@ -348,17 +364,44 @@ function silhouetteClause(planned: PlannedAsset): string {
     )
   }
   return (
-    'This plate is ONE LAYER of a paper doll. It will be composited onto a base figure drawn to a ' +
-    `fixed shared silhouette: ${shared}. This plate shows ${planned.region}, as it sits on that ` +
-    'figure, at that scale and in that position.\n\n' +
+    // THE SHARED SILHOUETTE IS DELIBERATELY NOT DESCRIBED HERE, and that is the second iteration
+    // of this repair rather than an oversight. The first iteration DID restate it — "composited
+    // onto a base figure drawn to a fixed shared silhouette: a standing adult figure occupying the
+    // centre of a tall narrow frame, head near the top, feet just above the bottom edge" — one
+    // sentence before the band. Measured over 40 regenerated FLUX plates, that version moved the
+    // `held` slot from 1 of 8 registered to 5 of 8 and left `top` at 0 of 8 and `legs` at 1 of 8.
+    //
+    // The split is the finding. A lantern is an OBJECT and the band tells the model where to put
+    // it. A tunic is a GARMENT, and a vivid positive description of a standing adult figure
+    // filling a tall frame is itself an instruction to draw one — so the model drew the figure
+    // wearing the tunic and the band lost the argument to the more pictorial of two positive
+    // clauses. The silhouette is registration data for the compositor, not subject matter, and
+    // naming it to an image model spends the prompt's most concrete sentence on the one thing the
+    // plate must NOT contain. `content/avatars.json` still holds it; the base plates still state
+    // it; an overlay is told its band instead, which is the same information without the picture.
+    'This image is a single GARMENT PLATE for a dress-up screen — one layer of a paper doll, ' +
+    'drawn on its own so that it can be laid over a separate base figure. It shows ' +
+    `${planned.region}, and that is the whole of its subject.\n\n` +
     `EVERY DRAWN PIXEL IN THIS IMAGE SITS INSIDE ${(planned.placement ?? '').toUpperCase()}. ` +
     `Above that band and below it, the frame is flat ${BRAND_GROUND} background for its full ` +
-    'width, out to all four edges. Inside the band the item is drawn LARGE: it fills the band ' +
-    'from the top of the band to the bottom of it and about two thirds of the frame width, ' +
-    'centred left to right, and it is immediately recognisable for what it is. It is the single ' +
-    'subject of this image and it is drawn with all the detail the rest of this brief asks for.\n\n' +
-    'The item is shown AS WORN and holds the shape of the body part that fills it, while the ' +
-    'wearer stays invisible: the item\'s own outline is the only outline anywhere in the frame.'
+    // NO WIDTH FIGURE HERE, and that is measured rather than stylistic. This sentence used to add
+    // "and about two thirds of the frame width". On a `feet` plate that is 170 px of width inside
+    // a 102 px band, and a model asked for both keeps the item's proportions and overflows the
+    // band to do it — which is precisely the failure being fixed. Scale is now expressed against
+    // the band alone, and width follows from the item's own shape.
+    'width, out to all four edges. Inside the band the item is drawn as large as it can be while ' +
+    'fitting entirely inside the band, centred left to right, and it is immediately recognisable ' +
+    'for what it is. It is the single subject of this image and it is drawn with all the detail ' +
+    'the rest of this brief asks for.\n\n' +
+    // VERBATIM FROM THE CLAUSE THAT GENERATED THE FIRST SET, and deliberately so. The first
+    // attempt at this repair reworded it too, to "holds the shape of the body part that fills it,
+    // while the wearer stays invisible" — and the reference endpoint's content filter refused
+    // four of the first eight `feet` overlays outright with BingBlockList_Prompt, having refused
+    // almost nothing across the original 288. A garment plate described in terms of body parts
+    // reads to a safety classifier as something else. The registration wording is what this
+    // change is testing; this sentence is not, so it is left exactly as it was.
+    'Draw the item as WORN, in its worn position, with the wearer invisible: the item\'s own ' +
+    'outline is the only outline anywhere in the frame.'
   )
 }
 
@@ -408,7 +451,7 @@ export function promptFor(planned: PlannedAsset): string {
     case 'avatar-base':
     case 'avatar-overlay':
       parts.push(
-        AVATAR_STYLE,
+        planned.style === 'avatar-overlay' ? OVERLAY_STYLE : AVATAR_STYLE,
         planned.subject,
         silhouetteClause(planned),
         paletteClause(planned.accent),
