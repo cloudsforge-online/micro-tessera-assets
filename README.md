@@ -139,9 +139,18 @@ instrument, for three reasons, two of them measurable now.**
 
 So the repair is a `--reprompt` of the 40 reference overlays in the `literal` dialect, written
 using the `positive` dialect's documented *method* — a forbidden region becomes a measurement of
-the region that is drawn. Parity is preserved by the existing replay: the candidate re-generated
-the same 40 from the reference's new record, and check 10 still reports **0 disagreements across
-392 entries in both sets**.
+the region that is drawn. On the second pass parity was preserved by the existing replay: the
+candidate re-generated the same 40 from the reference's new record, and check 10 reported **0
+disagreements across 392 entries in both sets**.
+
+**On the third pass it was not, and could not be.** The reference was reprompted again; the H100
+behind the candidate had already been released; and a candidate cannot replay a record against an
+endpoint that no longer exists. Check 10 therefore reports **40 disagreements**, all of them avatar
+overlays. That is the mechanism working as designed rather than failing — `--reprompt` is defined
+to break parity until the candidate replays — and it is recorded as defect 0 in §8 rather than
+worked around. **The lesson this repository already wrote down and then paid for a second time**:
+do not bring a per-hour deployment up until the reference set's prompts are final, and do not
+release one while they still might not be.
 
 **One thing that machinery claims about itself is not true here, and is worth flagging rather than
 repeating.** `dialects.py` and `replay.ts` both state that `verify.py --parity` re-derives a
@@ -193,33 +202,95 @@ candidate run chases the reference rather than racing it.
 
 Both sets are complete — **288 generated + 104 derived = 392 per model** — and `verify.py` passes
 every integrity check on both: checksums, dimensions, C2PA measured off the bytes, `assetCount`,
-no orphan files, **0 transposed assets across all 68 non-square generations** and **0 prompt
-disagreements across all 392 entries in both sets**. What follows is what is *not* right.
+no orphan files, **0 transposed assets across all 68 non-square generations**, and **0 unkeyed
+avatar plates across all 48 per set** on the new check 8a. What follows is what is *not* right,
+and the first item on the list is now a check that used to be green.
+
+**0. Prompt parity is broken on 40 of 392 entries, deliberately, and it cannot be repaired from
+this repository.**
+`verify.py` check 10 reports **40 disagreements**. It reported 0 until the third overlay repair.
+Every one of the 40 is an avatar overlay, and the cause is structural rather than accidental:
+`--reprompt` changes the question the REFERENCE set was asked, and parity is only restored when
+the candidate replays the new record. `replay.ts` says so itself, in
+`RepromptNotForCandidateError` — *"Reprompt against the reference first, then regenerate the
+candidates so every set is answering the same thing."* The first repair did exactly that and held
+parity at 0. **This one could not: the H100 behind `qwen-image-2512` was released after that run**,
+on this file's own recorded finding that Qwen's overlays are not misregistered game art but not
+game art at all, and a candidate cannot be regenerated against an endpoint that no longer exists.
+
+So the trade was made knowingly and is recorded here rather than in a commit message: **the
+comparison between the two models is no longer valid on those 40 assets** and remains valid on the
+other 352 per set, which are untouched and still agree byte for byte. Restoring it costs one replay
+of 40 images — about four minutes of H100 time, by that deployment's own measured rate — the next
+time such a deployment exists. Nothing else can restore it, and softening check 10 would destroy
+the only property this whole exercise rests on.
 
 **1. The paper doll composites better than it did, and still does not composite. This is the big one.**
 `verify.py` check 8 measures every avatar overlay's opaque bounding box against its slot's band.
-The 40 overlays have now been regenerated once per model against a rewritten registration clause.
-**The check went from 32 misregistered of 40 to 28 on FLUX, and from 40 of 40 to 40 of 40 on Qwen.**
+The 40 FLUX overlays have now been regenerated **three times**, against three versions of the
+registration clause. **The check has gone 32 misregistered of 40 → 28 → 26.** Qwen was regenerated
+on the second pass only and went 40 of 40 → 40 of 40; it is not part of the third, for the reason
+in defect 0 and the one in the Qwen paragraph below.
 
-| slot | FLUX registered before → after | Qwen |
+| slot | FLUX registered: first → second → third | Qwen |
 | --- | --- | --- |
-| `held` | 1/8 → **6/8** | 0/8 → 0/8 |
-| `top` | 1/8 → **3/8** | 0/8 → 0/8 |
-| `legs` | 0/8 → 1/8 | 0/8 → 0/8 |
-| `feet` | 0/8 → 0/8 | 0/8 → 0/8 |
-| `hair` | **6/8 → 2/8** | 0/8 → 0/8 |
-| total | 8/40 → 12/40 | 0/40 → 0/40 |
+| `held` | 1/8 → **6/8** → 6/8 | 0/8 |
+| `top` | 1/8 → 3/8 → 3/8 | 0/8 |
+| `legs` | 0/8 → 1/8 → 1/8 | 0/8 |
+| `feet` | 0/8 → 0/8 → **1/8** | 0/8 |
+| `hair` | 6/8 → **2/8** → 3/8 | 0/8 |
+| total | 8/40 → 12/40 → **14/40** | 0/40 |
 
-Mean ink height fell from 0.671 of the frame to 0.544 on FLUX and from 0.922 to 0.904 on Qwen.
+Mean ink height fell 0.671 → 0.544 → **0.485** of the frame on FLUX, and 0.922 → 0.904 on Qwen.
+
+**That second number is the one the third pass was aimed at, and it is the one that moved.** The
+defect after the second pass was scale, not subject, so the target was the height of the bounding
+box rather than the count — and two registrations across forty single draws is inside this
+endpoint's measured run-to-run spread, which this file puts at about ±0.10 of frame height. The
+plates are smaller. The count barely noticed. Both statements are true and the second does not
+cancel the first.
+
+`feet` registered its first plate in the history of this set, and is the slot that got closest
+without arriving: `clogs` lands at 0.68 against a limit of 0.68, `sandals` at 0.67, `wrapped` at
+0.62, `work-shoes` at 0.61. All eight are now a small pair of shoes low in the frame instead of a
+pair of legs across the middle of it.
+
+**And the second attempt at this pass had to be thrown away, which is the finding worth keeping.**
+Check 8 grades a bounding box in fractions of the frame's height, so the clause was written in
+exactly that vocabulary — "the HIGHEST paint anywhere in this picture is 80% of the way down the
+frame … the item measures exactly 20% of the picture's height", and a BOX with a top edge, a bottom
+edge and a width ratio. **FLUX drew it.** Six of the forty came back as measured drawings:
+`legs-trousers` inside a ruled rectangle with "44" up the right side and "90%" beneath,
+`held-umbrella` with dimension arrows and lettering across the top and the bottom,
+`top-shirt-sleeves` carrying "14%" and "48%", `legs-breeches` lettered "24 100 146%",
+`top-vest` ruled, `hair-tousled` underlined. `NO_TEXT` — *"no text, no lettering, no numerals"* —
+and `ARTEFACT_GUARD` were both in those prompts in full, and both lost. **A numeral in the subject
+clause outranks a prohibition four paragraphs later**, which is this repository's own stated
+ordering principle working exactly as documented, against it. It cost registrations as well as
+looking wrong: an arrow at the top edge and another at the bottom pins the bounding box at
+0.03–0.97 whatever the garment does.
+
+So the aim is stated in fractions of the frame **spelled as English**, in a per-slot `extent` field
+beside `placement`; the word "box" is gone, because two plates drew the box; and the numbers stay
+in `band`, where only `verify.py` reads them. What survived from that draft is the part that
+worked: where a band touches a frame edge the clause names **the edge** rather than a fraction,
+because an edge is a thing a diffusion model can find.
 
 **The number understates what changed on FLUX and the pictures do not.** Every overlay used to be
 a clothed figure: `feet-bare` was a pair of legs, `held-sketchbook` was a person holding a book,
 `top-tunic` was someone wearing a tunic. They are now isolated plates — a tunic with nobody in it,
 a lantern on its own, boots without legs — and **no garment lost its identity in the process**;
-the new plates are, if anything, better sprite work than the ones they replace. What check 8 still
-fails them for is SCALE rather than subject: a tunic drawn alone is still drawn centred and large,
-spanning 0.17–0.84 where its band allows 0.10–0.72. That is a smaller and different defect from
-the one recorded here before, and it is the one left.
+the new plates are, if anything, better sprite work than the ones they replace. **That is still
+true after the third pass** — all 40 read as their item on `review/flux-2-pro/sheet-avatar.png`,
+and no drafting artefact, scale bar or lettering survives on any of them. What check 8 still fails
+them for is SCALE rather than subject: `top-tunic` spans 0.19–0.79 where its band allows
+0.10–0.72, having spanned 0.17–0.84 before. Closer, still outside, still the defect that is left.
+
+The one plate in the third pass that was drawn twice is `top-robe`, which came back as a white card
+with "GARMENT PLATE" lettered across it and was regenerated on that ground. It is called out here
+because regenerating a plate for carrying an artefact is legitimate and regenerating one merely for
+missing its band by a hundredth would be tuning to the metric, and the difference should be on the
+record rather than in the operator's head.
 
 **The original diagnosis was half right, and the half that was wrong is worth keeping.** This file
 argued: *when two independent models fail one instruction the same way, the instruction is the
@@ -244,9 +315,16 @@ Three findings paid for by that re-measurement, all recorded in `generate.ts` wh
   "about two thirds of the frame width" *inside its band* — 170 px of width in a 102 px band on a
   `feet` plate — so a model preserving the item's proportions had to overflow the band to obey.
 
-**The `hair` slot regressed, 6/8 to 2/8, and it is left visible rather than tuned away.** Removing
-the silhouette removed the head-near-the-top anchor that compact hairstyles were relying on, and
-"as large as it can be" then grew them past their band. Fixing garments cost hair. Run-to-run
+**The `hair` slot regressed 6/8 to 2/8 on the second pass and has recovered to 3/8, not to 6/8.**
+Two causes, and only one of them is fixed. Removing the silhouette removed the head-near-the-top
+anchor that compact hairstyles relied on, and *"as large as it can be"* then grew them past their
+band — that phrase is deleted and the top-edge anchor replaces the silhouette, which is what
+brought `crop`, `topknot` and `wrapped` back inside. What still fails the slot is not a prompt
+defect at all: `braid` ("a single thick braid falling over one shoulder"), `long-loose` ("long
+loose hair falling past the shoulders"), `tousled` and `shaved` are subjects whose own extent runs
+past three tenths of a frame, and `content/avatars.json` asks for both. That tension between a
+slot's `items` and its `band` is stated here rather than resolved by widening `SLOT_BANDS`, which
+would be softening the check to go green. Run-to-run
 variance on this endpoint is about ±0.10 of frame height, measured across three generations of the
 same six assets, which is why the later iterations were piloted on six rather than validated on
 forty — and why no single asset's number here should be read as more precise than the spread.
@@ -260,8 +338,21 @@ described far too gently. For this one asset class the model is not answering th
 no registration clause will change that.
 
 So §6.3's 131,072 distinct avatars remains a design claim this asset set does not yet deliver, on
-either model — but on FLUX what stands between it and delivery is now a scale correction on 28
+either model — but on FLUX what stands between it and delivery is now a scale correction on 26
 plates rather than 32 plates of the wrong subject.
+
+**And check 8 had a degenerate solution the whole time, which is now guarded.** `opaque_box` falls
+back to distance-from-ground when a file carries no alpha — deliberately, so check 8 holds before
+`cutout.py` as well as after it. The consequence nobody had written down is that **a plate that
+never reached `cutout.py` measures identically to one that did**, while compositing as an opaque
+256×512 near-black rectangle that obliterates the base figure underneath it. That is worse than
+being the wrong size, and no check in this repository could see it: check 8 grades where paint is,
+not whether the file can be used. **Check 8a** now asserts the property the renderer actually
+depends on, per file, on all 48 plates in each set — an alpha channel exists, some of it is
+transparent, some of it is opaque — and it is integrity rather than conformance, so it is fatal for
+a candidate too, because a broken file is not a finding about a model. It also catches the opposite
+failure: a plate keyed to nothing has a smaller bounding box, and a smaller box fits a band more
+easily. A metric with a degenerate solution needs the guard beside it, not inside it.
 
 **2. The scene ground clause contradicted the daylight ward descriptions. Fixed, and the exemption
 is deleted.**
