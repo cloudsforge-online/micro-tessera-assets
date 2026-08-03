@@ -1,0 +1,68 @@
+{
+  "$comment": [
+    "When this deployment existed, and what it produced while it did.",
+    "",
+    "WHY THIS FILE IS COMMITTED WHEN NOTHING ELSE ABOUT THE ENDPOINT IS: the bill is wall-clock.",
+    "A per-hour provider charges for EXISTENCE, not for output, so when the deployment existed is",
+    "provenance in a way that no per-image number could be. The scoring URI and its key live only",
+    "in the gitignored studio/.env.local and are in no file here.",
+    "",
+    "NO PER-IMAGE COST IS DERIVED FROM THIS, and none can honestly be. The endpoint returns",
+    "`quality` and `usage` as null, so there is no per-image signal at all; and dividing hours by",
+    "images would be a statement about how well the run was organised rather than about the model.",
+    "COMPARISON.md section 6 argues that at length. The estate already has the proof: Cosmos 3",
+    "Super billed for its entire deployment lifetime and produced zero images, because it never",
+    "came up, and no per-image arithmetic can express that.",
+    "",
+    "THE DEFECT THIS FILE EXISTS TO NOT REPEAT: brand/candidates/qwen-image-2512/DEPLOYMENT.json",
+    "records teardown.state as \"NOT TORN DOWN — STILL BILLING\". That A100 was never torn down.",
+    "doc 23 section 2.3 flags it as a live cost defect and says somebody should check the standing",
+    "one; this run records its own window honestly instead of inheriting the habit."
+  ],
+  "deployment": "qwen--qwen-image-2512",
+  "sku": "H100",
+  "region": "recorded by the operator; not observed from this repository",
+  "created": {
+    "at": null,
+    "$note": [
+      "NOT OBSERVED, and deliberately left null rather than guessed. The deployment was created by",
+      "the owner before this run began and held open specifically so this set could be generated,",
+      "so its billed lifetime STARTS EARLIER than the generation window below and this repository",
+      "cannot say by how much. Writing a plausible timestamp here would turn an unknown into a",
+      "figure somebody would later quote."
+    ]
+  },
+  "generation": {
+    "startedAt": "2026-08-03T10:03:07Z",
+    "finishedAt": null,
+    "$note": [
+      "The window this repository can actually measure: the first and last `generatedAt` in",
+      "candidates/qwen-image-2512/MANIFEST.json. Both are read off the manifest rather than typed.",
+      "",
+      "THE CANDIDATE WAS IDLE FOR MOST OF THIS WINDOW, and that is the most important operational",
+      "fact in this file. A candidate can only generate an asset whose prompt the reference has",
+      "already recorded (replay.ts), and the reference endpoint is a SHARED serverless deployment",
+      "that spent 56% of its attempts being rate-limited at roughly 1.5 generations per minute. So",
+      "the H100 ran at the speed of a throttled neighbour rather than at its own ~15.4s per image.",
+      "",
+      "That is a cost finding rather than a complaint: on this pairing the dedicated hardware's",
+      "billed hours are set by the SLOWEST model in the comparison, not the fastest, and any future",
+      "run should generate the reference set first and only then bring the per-hour deployment up."
+    ]
+  },
+  "measured": {
+    "secondsPerGeneration": null,
+    "generations": null,
+    "$note": "Written from the manifest when the set completes; see report_deployment() in compare.py."
+  },
+  "teardown": {
+    "state": "OWNER-HELD — the owner is holding this deployment open for this run and will delete it themselves once both sets exist",
+    "at": null,
+    "$note": [
+      "This run does not tear the deployment down, because it was not this run that brought it up.",
+      "What it owes the owner instead is a completion signal the moment the last asset lands, so",
+      "the deployment is not billing for a run that has already finished — which is exactly the",
+      "failure mode the brand run's file records."
+    ]
+  }
+}
