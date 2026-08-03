@@ -1,6 +1,8 @@
 # micro-tessera-assets
 
 [![ci](https://github.com/cloudsforge-online/micro-tessera-assets/actions/workflows/ci.yml/badge.svg)](https://github.com/cloudsforge-online/micro-tessera-assets/actions/workflows/ci.yml)
+![code licence](https://img.shields.io/badge/code-MIT-97CA00)
+![art licence](https://img.shields.io/badge/art%20licence-CC%20BY%204.0-EF9421?logo=creativecommons&logoColor=white)
 ![assets](https://img.shields.io/badge/assets-392%20PNG-FF4785)
 ![split](https://img.shields.io/badge/of%20which-288%20generated%20%C2%B7%20104%20derived-C77DFF)
 ![art](https://img.shields.io/badge/art-FLUX%202%20Pro-0A7CFF)
