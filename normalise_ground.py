@@ -32,9 +32,16 @@ Pure standard library — no Pillow — so this runs anywhere the estate's CI ru
 across files because the filter reconstruction is per-byte Python and a 1024 square is three
 million bytes of it; `multiprocessing` is stdlib and turns half an hour into a few minutes.
 
-    python3 normalise_ground.py           # every flat asset not already normalised
-    python3 normalise_ground.py --force   # re-run over assets already normalised
-    python3 normalise_ground.py --dry-run # report the delivered grounds, change nothing
+A fourth thing this copy does that none of the three sibling copies do: **it takes `--provider`.**
+Theirs reach for `HERE / "MANIFEST.json"` and are therefore reference-only — run one against a
+candidate and it silently normalises nothing, because the candidate's files are not where it looks.
+Both sets here have to be post-processed identically or COMPARISON.md §7.2's claim that ground
+spread is finally like-for-like would simply be false.
+
+    python3 normalise_ground.py            # every flat asset in every set present on disk
+    python3 normalise_ground.py --provider qwen-image-2512
+    python3 normalise_ground.py --force    # re-run over assets already normalised
+    python3 normalise_ground.py --dry-run  # report the delivered grounds, change nothing
 """
 
 from __future__ import annotations
@@ -46,10 +53,9 @@ import sys
 import zlib
 from pathlib import Path
 
+import providers
+
 HERE = Path(__file__).resolve().parent
-# Resolved per provider at run time; see main(). Kept as a name so nothing below
-# reaches for a hardcoded path.
-MANIFEST = HERE / "MANIFEST.json"
 
 TARGET = (0x12, 0x10, 0x0F)
 STEP = "ground normalised to #12100f by normalise_ground.py"
@@ -283,8 +289,8 @@ def normalise(path: Path, dry_run: bool = False):
 
 
 def _job(args):
-    relative, dry_run = args
-    path = HERE / relative
+    relative, dry_run, root = args
+    path = Path(root) / relative
     try:
         return relative, normalise(path, dry_run), None
     except Unsupported as err:  # a fact about the file, not a crash
@@ -292,10 +298,37 @@ def _job(args):
 
 
 def main(argv: list[str]) -> int:
-    force = "--force" in argv
-    dry_run = "--dry-run" in argv
+    """One provider per run, resolved through providers.py rather than a hardcoded path.
+
+    The sibling repositories' copies of this file reach for `HERE / "MANIFEST.json"` and are
+    therefore reference-only — running them against a candidate silently normalises nothing,
+    because the candidate's files are not where they look. Both sets here must be post-processed
+    identically or COMPARISON.md §7.2's like-for-like ground claim is false.
+    """
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Snap flat grounds to the brand ash value.")
+    providers.add_argument(parser)
+    parser.add_argument("--force", action="store_true", help="re-run over assets already normalised")
+    parser.add_argument("--dry-run", action="store_true", help="report delivered grounds, change nothing")
+    args = parser.parse_args(argv)
+    force, dry_run = args.force, args.dry_run
+
+    chosen = providers.selected(args)
+    if not chosen:
+        print("no provider has a manifest on disk", file=sys.stderr)
+        return 1
+    failures = 0
+    for provider in chosen:
+        print(f"===== {provider.id}")
+        failures += _normalise_one(provider, force, dry_run)
+    return 1 if failures else 0
+
+
+def _normalise_one(provider, force: bool, dry_run: bool) -> int:
+    MANIFEST = provider.manifest
     if not MANIFEST.exists():
-        print("MANIFEST.json does not exist; generate first", file=sys.stderr)
+        print(f"{MANIFEST} does not exist; generate first", file=sys.stderr)
         return 1
     document = json.loads(MANIFEST.read_text())
     assets = document["assets"]
@@ -315,7 +348,7 @@ def main(argv: list[str]) -> int:
 
     print(f"{len(targets)} flat-ground asset(s) to normalise")
     with multiprocessing.Pool() as pool:
-        results = pool.map(_job, [(a["path"], dry_run) for a in targets])
+        results = pool.map(_job, [(a["path"], dry_run, str(provider.root)) for a in targets])
 
     by_path = {a["path"]: a for a in assets}
     grounds: list[tuple[str, tuple[int, int, int]]] = []
@@ -333,10 +366,10 @@ def main(argv: list[str]) -> int:
             continue
         entry = by_path[relative]
         # Written once, at the FIRST normalisation of the file, and never on a re-run: this
-        # field records what FLUX delivered, and a --force pass samples an already-normalised
-        # file. This repository's own second pass overwrote 81 entries before this guard
-        # existed — those now read null, honestly, because the truth is unrecoverable (README
-        # §8 records the range measured before the loss).
+        # field records what the MODEL delivered, and a --force pass would sample an
+        # already-normalised file. micro-aetherholm-assets' second pass overwrote 81 entries
+        # before this guard existed and the truth was unrecoverable; the guard is inherited
+        # here rather than the loss.
         if entry.get("deliveredGround") is None and STEP not in entry.get("postProcessing", []):
             entry["deliveredGround"] = hexed
         entry["sha256"] = sha

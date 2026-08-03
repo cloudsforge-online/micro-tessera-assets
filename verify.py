@@ -1,38 +1,55 @@
 #!/usr/bin/env python3
 """Check every asset against the numbers it claims, the plan, and the art bible.
 
-Looking at an image tells you whether an island is appealing and whether the wordmark spells
-Aetherholm. It does not reliably tell you that a ground is #2b2b2d rather than #12100f, that an
-icon has drifted thirty degrees of hue off its anchor, or that a manifest entry still claims a
-C2PA box the post-processing dropped — the eye adapts, and a hundred files adapt it a hundred
-times. The measurable things are measured here; the rest is judged on `sheet.py`'s contact
-sheets.
+Looking at an image tells you whether a stool is appealing and whether a ward reads as a place. It
+does not reliably tell you that a ground is #2b2b2d rather than #12100f, that an icon has drifted
+thirty degrees of hue off its anchor, that an avatar overlay is registered four pixels left of
+every other one, or that a manifest entry still claims a C2PA box the post-processing dropped —
+the eye adapts, and 288 files adapt it 288 times. The measurable things are measured here; the
+rest is judged on `sheet.py`'s contact sheets, against COMPARISON.md's criteria.
 
-Seven checks:
+The checks, and where each came from:
 
-  1. **Completeness.** Every asset in PLAN.json has a manifest entry and a file on disk.
-  2. **Dimensions.** The bytes must measure exactly what the manifest declares.
-  3. **Checksum.** The file on disk must be the file the manifest recorded. This repository
-     rewrites its own files after generation (normalise, derive), so this is the check most
-     likely to catch a step that forgot to write back.
-  4. **C2PA disclosure.** The manifest's `c2pa` flag must be what the bytes actually say. This
-     is micro-brand's hardest-won check: 54 entries there shipped claiming a box the
-     ground-normalisation commit had dropped, and the verifier stayed green because nothing
-     compared the claim to the bytes. The check is about truth, not presence — an asset is free
-     to carry no box, and it may not say otherwise.
-  5. **Ground, by class.** A `flat` asset must be EXACTLY #12100f in all four corners after
-     normalisation — no tolerance, because the value is set numerically and any deviation means
-     the step did not run. A `scene` asset is a picture and is held to a darkness ceiling on its
-     edges instead. The two rules are reported separately.
+  1. **Completeness.** Every asset in PLAN.json has a manifest entry and a file on disk, and
+     PLAN.json itself still totals doc 23 §2.3's 288 + 104 = 392.
+  2. **Dimensions**, read from the bytes and matched against `declaredSize` — and `deliveredSize`
+     re-checked against the pixels, which is what makes check 9 trustworthy.
+  3. **Checksum** recomputed from the bytes. This repository rewrites its own files after
+     generation (normalise, cutout, project, derive), so this is the check most likely to catch a
+     step that forgot to write back.
+  4. **C2PA measured off the bytes** and compared to the manifest flag. micro-brand's hardest-won
+     check: 54 entries there shipped claiming a box the ground-normalisation commit had dropped,
+     and the verifier stayed green because nothing compared the claim to the bytes. Worse,
+     `emberkin-assets/verify.py` has NO c2pa check at all — `grep -c c2pa` on it returns 0 — so
+     its 83 `c2pa: true` entries are asserted at write time and have never been measured by
+     anything. **The estate measures c2pa and never asserts it; a repository that asserts it is a
+     repository that will be wrong quietly.**
+  5. **Ground, by class**, and Tessera has THREE rather than the siblings' two:
+       `flat`  exactly #12100f in all four corners after normalisation — no tolerance, because the
+               value is set numerically and any deviation means the step did not run.
+       `scene` a picture, held to a darkness ceiling on its edges instead.
+       `plate` a MATERIAL SHEET. Neither rule applies: a saltflat plate is cracked white by design
+               (doc 23 §2.4) and a grove plate is near-black, so a darkness ceiling would fail the
+               art and a flat-ground check would fail all 32. What a plate is checked for is that
+               it is FULL BLEED — that its edges are not a mount, a border or a vignette — because
+               that is the property `project_iso.py` actually depends on.
   6. **Not degenerate.** A file that is 99.5% ground is a blank, and a blank passes every other
      check on this list.
-  7. **Accent coverage**, where the set's floor is above zero: the flat-vector sets (icons, ship
-     icons, heraldry, title chrome) must actually be drawn in their declared anchor. The
-     painterly sets and scenes are multi-hued by design and carry a floor of zero — the accent
-     is recorded on them, not gated.
+  7. **Accent coverage**, where the set's floor is above zero: the flat-vector sets (glyphs,
+     icons, chrome) must actually be drawn in their declared anchor. The painterly sets carry a
+     floor of zero — the accent is recorded on them, not gated.
+  8. **NEW — footprint registration.** Every avatar overlay's opaque bounding box lies within the
+     vertical band its slot declares. doc 23 §2.15 item 7: a misregistered overlay is invisible in
+     a contact sheet and obvious in play, which is the definition of a check worth automating.
+  9. **NEW — Qwen transposition.** For every non-square asset, the candidate's MEASURED dimensions
+     equal the reference's rather than their transpose. doc 23 §2.15 item 8. This catches the
+     `size` bug at verify time rather than at contact-sheet time, and it has to be measured off
+     the bytes because the endpoint's response reports the size it was ASKED for either way.
+ 10. **Prompt parity** across every set present. The check the whole comparison rests on.
 
-    python3 verify.py                 # everything
-    python3 verify.py icons heraldry  # only these sets
+    python3 verify.py                      # every set present on disk
+    python3 verify.py --provider flux-2-pro
+    python3 verify.py objects glyphs       # only these sets
 """
 
 from __future__ import annotations
@@ -53,33 +70,54 @@ PLAN = HERE / "PLAN.json"
 
 GROUND = "#12100f"
 
-# A scene is held to a darkness ceiling at its EDGES. 0.12 passes a near-black with room to
-# spare and fails the mid-grey taupe field (about 0.23) the brand run's first live image wore.
+# A scene is held to a darkness ceiling at its EDGES. 0.12 passes a near-black with room to spare
+# and fails the mid-grey taupe field (about 0.23) the brand run's first live image wore.
 MAX_SCENE_EDGE_LUMA = 0.12
 
-# Degrees of hue. FLUX renders every colour lighter than the hex it is given, and lightening
-# drags the hue; 30 is where the sibling runs settled.
+# Degrees of hue. Both models render colour lighter than the hex they are given, and lightening
+# drags the hue; 30 is where the three sibling runs settled.
 MAX_HUE_DRIFT = 30.0
 # Below this saturation a pixel is ground, ink or rim light, and its hue is noise.
 MIN_SAT = 0.15
 
 # The share of the image that must be drawn within tolerance of the asset's own accent.
-# Painterly sets and scenes are multi-hued by design: floor zero, accent recorded not gated.
+# Painterly sets are multi-hued by design: floor zero, accent recorded rather than gated.
 MIN_COVERAGE = {
+    "glyphs": 0.010,
     "icons": 0.010,
-    "shipicons": 0.010,
-    "heraldry": 0.005,
-    "title": 0.005,
-    "islands": 0.0,
-    "buildings": 0.0,
-    "ships": 0.0,
+    "chrome": 0.005,
+    "terrain": 0.0,
+    "objects": 0.0,
+    "structure": 0.0,
+    "avatar": 0.0,
+    "backdrop": 0.0,
+    "kiln": 0.0,
+    "markers": 0.0,
     "keyart": 0.0,
     "splashes": 0.0,
 }
 # The share of the image that must be something other than ground. Below this it is a blank.
 MIN_INK = 0.02
 
+# A plate must be full bleed. If the outer band is markedly flatter than the middle it is a mount,
+# a border or a vignette rather than a material, and project_iso.py will cut that band into the
+# world's ground. Measured as the ratio of edge-band luma spread to centre luma spread.
+MIN_PLATE_EDGE_ACTIVITY = 0.25
+
 C2PA_MARKER = b"c2pa"
+
+#: The vertical band each overlay slot is allowed to occupy, as a fraction of the frame. These are
+#: the extents the `region` strings in content/avatars.json describe, with a generous margin: the
+#: point is to catch a hair plate that drew a whole figure or a boots plate that drew them at the
+#: waist, not to police a braid that falls three per cent lower than another.
+SLOT_BANDS = {
+    "hair": (0.0, 0.42),
+    "top": (0.10, 0.72),
+    "legs": (0.38, 0.94),
+    "feet": (0.72, 1.0),
+    "held": (0.25, 0.88),
+}
+SLOT_MARGIN = 0.04
 
 
 def hex_to_rgb(value: str) -> tuple[int, int, int]:
@@ -187,6 +225,161 @@ def read_image(image: Image.Image, accent: str, ground: tuple[int, int, int]) ->
     return Reading(len(matched) / total, rendered, ink / total)
 
 
+def plate_edge_activity(image: Image.Image) -> float:
+    """How alive the outer band is, against the middle. A mount or a vignette reads near zero.
+
+    A material sheet has about as much going on at its edge as at its centre — that is what makes
+    it a material rather than a picture of one. A framed, matted or vignetted plate has a flat
+    outer band, and `project_iso.py` will happily cut a tile out of that band and drop it on the
+    world's ground. This is the plate equivalent of the flat-ground check, and it exists because
+    neither of the siblings' two ground rules can be applied to a material at all.
+    """
+    rgb = image.convert("RGB")
+    width, height = rgb.size
+    band = max(4, min(width, height) // 16)
+
+    def spread(points) -> float:
+        values = [luma(p) for p in points]
+        if len(values) < 2:
+            return 0.0
+        mean = sum(values) / len(values)
+        return (sum((v - mean) ** 2 for v in values) / len(values)) ** 0.5
+
+    step = max(1, min(width, height) // 120)
+    edge = [
+        rgb.getpixel((x, y))
+        for y in range(0, height, step)
+        for x in range(0, width, step)
+        if min(x, y, width - 1 - x, height - 1 - y) < band
+    ]
+    centre = [
+        rgb.getpixel((x, y))
+        for y in range(band * 2, height - band * 2, step)
+        for x in range(band * 2, width - band * 2, step)
+    ]
+    centre_spread = spread(centre)
+    if centre_spread <= 1e-6:
+        return 1.0
+    return spread(edge) / centre_spread
+
+
+def opaque_box(path: Path) -> tuple[float, float, float, float] | None:
+    """The normalised bounding box of everything that is not ground and not transparent.
+
+    Works before or after `cutout.py`: if the file has an alpha channel the box is taken from
+    alpha, and if it does not it is taken from distance to the flat ground. Check 8 has to hold at
+    both points in the pipeline, because an overlay can be misregistered from the moment it is
+    generated and the cut does not move it.
+    """
+    with Image.open(path) as raw:
+        width, height = raw.size
+        if raw.mode in ("RGBA", "LA") or "transparency" in raw.info:
+            alpha = raw.convert("RGBA").getchannel("A")
+            box = alpha.point(lambda v: 255 if v > 24 else 0).getbbox()
+        else:
+            rgb = raw.convert("RGB")
+            target = hex_to_rgb(GROUND)
+            mask = Image.new("L", rgb.size, 0)
+            draw = mask.load()
+            pixels = rgb.load()
+            for y in range(height):
+                for x in range(width):
+                    r, g, b = pixels[x, y]
+                    if (r - target[0]) ** 2 + (g - target[1]) ** 2 + (b - target[2]) ** 2 > 40 * 40:
+                        draw[x, y] = 255
+            box = mask.getbbox()
+    if not box:
+        return None
+    return (box[0] / width, box[1] / height, box[2] / width, box[3] / height)
+
+
+def check_registration(provider, document: dict) -> list[str]:
+    """CHECK 8 — every avatar overlay sits inside the vertical band its slot declares.
+
+    doc 23 §2.8: every overlay is generated against the same base silhouette, and §2.15 item 7
+    makes that a bounding-box match. This is the one place in the pipeline that can fail
+    invisibly — a hat drawn at chest height composites cleanly, verifies cleanly, and is obviously
+    broken the first time anybody walks past it.
+    """
+    problems: list[str] = []
+    for asset in document["assets"]:
+        if asset["set"] != "avatar" or asset["derivedFrom"] is not None:
+            continue
+        slot = asset["slug"].split("-")[0]
+        if slot not in SLOT_BANDS:
+            continue  # a base, not an overlay
+        path = provider.root / asset["path"]
+        if not path.exists():
+            continue
+        box = opaque_box(path)
+        if box is None:
+            problems.append(f'{asset["path"]}: overlay is entirely empty')
+            continue
+        top, bottom = box[1], box[3]
+        lo, hi = SLOT_BANDS[slot]
+        if top < lo - SLOT_MARGIN or bottom > hi + SLOT_MARGIN:
+            problems.append(
+                f'{asset["path"]}: {slot} overlay ink spans {top:.2f}-{bottom:.2f} of the frame, '
+                f"outside its slot's {lo:.2f}-{hi:.2f} band — it will not register against the "
+                "base silhouette"
+            )
+    return problems
+
+
+def check_transposition(documents: dict[str, dict]) -> list[str]:
+    """CHECK 9 — no candidate delivered a non-square asset rotated.
+
+    THE ONE CHECK THAT HAD TO BE WRITTEN FOR THIS REPOSITORY RATHER THAN INHERITED. Qwen's images
+    route takes `size` and transposes it: ask for 1024x384 and you receive 384x1024, while the
+    response still REPORTS 1024x384. Nothing in the JSON can catch that, and a square probe cannot
+    see it at all — which is how it survived a careful handover. **68 of this set's 288
+    generations are non-square**, so an unnoticed regression here would rotate every avatar plate,
+    every ward backdrop and all four wide title assets while every log line looked correct.
+
+    `backends.ts` compensates in the envelope by sending height x width. This measures whether the
+    compensation is still working, off the delivered bytes, per asset — never off the response.
+    """
+    reference_id = providers.reference().id
+    if reference_id not in documents:
+        return []
+    reference = {a["asset"]: a for a in documents[reference_id]["assets"]}
+    problems: list[str] = []
+    for provider_id, document in documents.items():
+        if provider_id == reference_id:
+            continue
+        for asset in document["assets"]:
+            want = reference.get(asset["asset"])
+            if not want:
+                continue
+            declared = tuple(int(n) for n in asset["declaredSize"].split("x"))
+            if declared[0] == declared[1]:
+                continue  # a square cannot show it, which is exactly why this is not a spot check
+            if asset["deliveredSize"] != want["deliveredSize"]:
+                transpose = "x".join(reversed(want["deliveredSize"].split("x")))
+                note = " — that is its TRANSPOSE" if asset["deliveredSize"] == transpose else ""
+                problems.append(
+                    f'{provider_id}: {asset["asset"]} measured {asset["deliveredSize"]} against '
+                    f'the reference\'s {want["deliveredSize"]}{note}'
+                )
+    return problems
+
+
+def check_plan_totals() -> list[str]:
+    """CHECK 1b — PLAN.json still totals doc 23 §2.3."""
+    plan = json.loads(PLAN.read_text())
+    problems: list[str] = []
+    for field, expected, what in (
+        ("total", 288, "generated assets"),
+        ("derivedTotal", 104, "derived assets"),
+        ("grandTotal", 392, "assets in total"),
+    ):
+        if plan[field] != expected:
+            problems.append(
+                f"PLAN.json declares {plan[field]} {what}; doc 23 §2.3 says {expected}"
+            )
+    return problems
+
+
 def check_parity(documents: dict[str, dict]) -> list[str]:
     """Every asset present in two or more sets must carry the same prompt in both.
 
@@ -198,12 +391,7 @@ def check_parity(documents: dict[str, dict]) -> list[str]:
     It compares the MANIFESTS, not PLAN.json and not the prompt-building code, because the manifest
     is the only artefact that records what was actually SENT. PLAN.json is regenerated from the
     current clauses on every run and drifts away from the run it describes the moment a clause is
-    edited — measured here at the time of writing, most of this set's entries already carry a
-    manifest prompt its own PLAN.json no longer derives. Checking against the code would be
-    checking against a thing that has already moved.
-
-    Vacuously true while there is one set, and deliberately shipped before there is a second: it is
-    binding the first minute a candidate lands, which is the minute it matters.
+    edited. Checking against the code would be checking against a thing that has already moved.
     """
     if len(documents) < 2:
         return []
@@ -211,8 +399,8 @@ def check_parity(documents: dict[str, dict]) -> list[str]:
     by_key: dict[str, dict[str, str]] = {}
     for provider_id, document in documents.items():
         for asset in document["assets"]:
-            # providers.key_of, not a hand-built string: the three asset repositories identify an
-            # asset differently and that function is the only place the difference lives.
+            # providers.key_of, not a hand-built string: the estate's asset repositories identify
+            # an asset differently and that function is the only place the difference lives.
             by_key.setdefault(providers.key_of(asset), {})[provider_id] = asset["prompt"]
 
     reference_id = providers.reference().id
@@ -242,13 +430,12 @@ def check_parity(documents: dict[str, dict]) -> list[str]:
 
 
 def check_integrity(provider, document: dict) -> list[str]:
-    """Two things about the manifest as a whole, rather than about any one image."""
+    """Things about the manifest as a whole, rather than about any one image."""
     problems: list[str] = []
     declared = document.get("assetCount")
     if declared is not None and declared != len(document["assets"]):
-        # It was wrong in two of the estate's three asset repositories when this was written,
-        # because the count is written by the generator and later entries were added by another
-        # tool. A manifest whose own summary disagrees with its own body is one nobody can quote.
+        # It was wrong in two of the estate's three earlier asset repositories when this was
+        # written. A manifest whose own summary disagrees with its own body is one nobody can quote.
         problems.append(
             f'MANIFEST.json: assetCount says {declared} and the file carries '
             f'{len(document["assets"])} entries'
@@ -274,6 +461,11 @@ def verify_set(provider, document: dict, wanted: set[str]) -> list[str]:
             continue
         if planned["key"] not in assets and f'{planned["key"]}-source' not in assets:
             failures.append(f'{planned["key"]}: planned but never generated')
+    for planned in plan["derived"]:
+        if wanted and planned["set"] not in wanted:
+            continue
+        if planned["key"] not in assets:
+            failures.append(f'{planned["key"]}: planned as a derivative but never built')
 
     for asset in document["assets"]:
         if wanted and asset["set"] not in wanted:
@@ -311,11 +503,22 @@ def verify_set(provider, document: dict, wanted: set[str]) -> list[str]:
                 problems.append(
                     f'{image.size[0]}x{image.size[1]} against a declared {asset["declaredSize"]}'
                 )
+            # ---- 2b. deliveredSize must be what the bytes measure. This is what makes check 9
+            # trustworthy: it compares deliveredSize across providers, and that column is only
+            # worth comparing if it came from the pixels rather than from a response that reports
+            # the size it was asked for whatever it actually sent.
+            if asset["derivedFrom"] is None and asset["deliveredSize"] != "unknown":
+                measured = f"{image.size[0]}x{image.size[1]}"
+                if measured != asset["deliveredSize"] and not asset.get("cropped"):
+                    problems.append(
+                        f'deliveredSize says {asset["deliveredSize"]} and the bytes measure '
+                        f"{measured}"
+                    )
 
             corners = sample_corners(image)
             corner_luma = luma(corners)
 
-            # ---- 5. ground, by class.
+            # ---- 5. ground, by class. Three classes, not the siblings' two.
             if asset["groundClass"] == "flat":
                 distinct = corner_extremes(image)
                 off = [c for c in distinct if c != ground_target]
@@ -325,6 +528,15 @@ def verify_set(provider, document: dict, wanted: set[str]) -> list[str]:
                         f"{GROUND} — nearest stray {rgb_to_hex(off[0])}; normalisation did not "
                         "run or did not take"
                     )
+            elif asset["groundClass"] == "plate":
+                activity = plate_edge_activity(image)
+                if activity < MIN_PLATE_EDGE_ACTIVITY:
+                    conformance.append(
+                        f"plate edge activity {activity:.2f} against a floor of "
+                        f"{MIN_PLATE_EDGE_ACTIVITY} — the outer band is flatter than the middle, "
+                        "so this is a mount, a border or a vignette rather than a material, and "
+                        "project_iso.py will cut that band into the world's ground"
+                    )
             elif corner_luma > MAX_SCENE_EDGE_LUMA:
                 conformance.append(
                     f"scene edges at {rgb_to_hex(corners)} are too light (luma {corner_luma:.3f}, "
@@ -333,15 +545,15 @@ def verify_set(provider, document: dict, wanted: set[str]) -> list[str]:
 
             reading = read_image(image, asset["accent"], corners)
 
-            # ---- 6. not degenerate.
-            if reading.ink < MIN_INK:
+            # ---- 6. not degenerate. A plate is all ink by definition and cannot fail this.
+            if asset["groundClass"] != "plate" and reading.ink < MIN_INK:
                 conformance.append(
                     f"only {reading.ink * 100:.2f}% of the image differs from its ground — this "
                     "is a blank"
                 )
 
             # ---- 7. accent coverage, where the set's floor is above zero.
-            floor = MIN_COVERAGE.get(asset["set"], 0.005)
+            floor = MIN_COVERAGE.get(asset["set"], 0.0)
             if reading.coverage < floor:
                 conformance.append(
                     f'only {reading.coverage * 100:.2f}% of the image is drawn within '
@@ -351,7 +563,7 @@ def verify_set(provider, document: dict, wanted: set[str]) -> list[str]:
         fatal = problems + (conformance if provider.shipped else [])
         mark = "FAIL" if fatal else ("warn" if conformance else "ok  ")
         rows.append(
-            f'{mark} {asset["set"]:<10} {asset["slug"]:<24} {asset["declaredSize"]:>9} '
+            f'{mark} {asset["set"]:<10} {asset["slug"]:<26} {asset["declaredSize"]:>9} '
             f'{asset["groundClass"]:<5} corner {rgb_to_hex(corners)} '
             f"ink {reading.ink * 100:5.1f}%  "
             f'colour {rgb_to_hex(reading.rendered) if reading.rendered else "-":<8} '
@@ -365,13 +577,14 @@ def verify_set(provider, document: dict, wanted: set[str]) -> list[str]:
     print("\n".join(rows))
     print(
         f"\ntarget ground {GROUND} (exact on flat assets, luma ceiling {MAX_SCENE_EDGE_LUMA} on "
-        f"scene edges); hue tolerance {MAX_HUE_DRIFT:.0f} degrees; c2pa measured off the bytes"
+        f"scene edges, full-bleed floor {MIN_PLATE_EDGE_ACTIVITY} on plates); hue tolerance "
+        f"{MAX_HUE_DRIFT:.0f} degrees; c2pa measured off the bytes"
     )
     return failures
 
 
 def main(argv: list[str]) -> int:
-    """Run every check, per provider, and then the two that are about the set of sets.
+    """Run every check, per provider, and then the three that are about the set of sets.
 
     A candidate set is expected to be RED while it is being worked on. That must not be able to
     turn the shipped reference set red with it, which is why each set has its own manifest and its
@@ -388,7 +601,7 @@ def main(argv: list[str]) -> int:
         print("no provider has a manifest on disk", file=sys.stderr)
         return 1
 
-    all_failures: list[str] = []
+    all_failures: list[str] = [f"plan: {p}" for p in check_plan_totals()]
     documents: dict[str, dict] = {}
 
     for provider in chosen:
@@ -397,8 +610,23 @@ def main(argv: list[str]) -> int:
         documents[provider.id] = document
         failures = verify_set(provider, document, set(args.sets))
         failures.extend(check_integrity(provider, document))
+        registration = check_registration(provider, document)
+        if registration:
+            print(f"----- registration: {len(registration)} misregistered overlay(s)")
+            for problem in registration:
+                print(f"  -> {problem}")
+        # Conformance, not integrity: fatal for the shipped set, reported for a candidate.
+        if provider.shipped:
+            failures.extend(registration)
         print(f"{len(failures)} failure(s) in {provider.id}\n")
         all_failures.extend(f"{provider.id}: {f}" for f in failures)
+
+    transposed = check_transposition(documents)
+    if len(documents) > 1:
+        print(f"===== delivered-size parity: {len(transposed)} transposed or mismatched asset(s)")
+        for problem in transposed:
+            print(f"  -> {problem}")
+    all_failures.extend(f"transposition: {p}" for p in transposed)
 
     parity = check_parity(documents)
     if len(documents) > 1:
