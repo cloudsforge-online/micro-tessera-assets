@@ -1,0 +1,52 @@
+name: CI
+
+# A content repository: no service, no suite, no image. What CI owes it is the check that guards
+# the failure that cannot be undone — a committed secret is compromised the moment it lands —
+# and the repository's own verifier. micro-brand's verify.py existed, passed, and was run by
+# nobody, which is how 54 entries shipped claiming a C2PA box the bytes had lost; and
+# micro-emberkin-assets' CI still runs only hygiene, which is how two favicons landed there with
+# no manifest entry at all. A manifest is a claim about files, and a claim nothing re-checks is
+# a claim that drifts the first time the files move.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  hygiene:
+    uses: cloudsforge-online/micro-org/.github/workflows/secret-hygiene.yml@main
+    with:
+      require-dockerignore: false
+    permissions:
+      contents: read
+
+  manifest:
+    name: verify.py
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      # Pillow is the only dependency, and only for decoding pixels.
+      - run: python3 -m pip install --disable-pip-version-check --quiet pillow
+      - run: python3 verify.py
+      # Every file in assets/ must be accounted for by the manifest — the emberkin-assets gap
+      # (files on disk with no provenance entry) run in the other direction to verify.py's
+      # manifest->file checks.
+      - name: every asset file has a manifest entry
+        run: |
+          python3 - <<'EOF'
+          import json, pathlib, sys
+          here = pathlib.Path('.')
+          recorded = {a['path'] for a in json.loads((here / 'MANIFEST.json').read_text())['assets']}
+          on_disk = {str(p) for p in here.glob('assets/**/*.png')}
+          orphans = sorted(on_disk - recorded)
+          for path in orphans:
+              print(f'{path}: on disk with no manifest entry', file=sys.stderr)
+          sys.exit(1 if orphans else 0)
+          EOF

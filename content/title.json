@@ -1,0 +1,64 @@
+{
+  "$comment": [
+    "Sets 13–15: key art, title chrome and the season splashes.",
+    "docs/ecosystem/23-tessera.md §2.14. 20 assets — 12 generated, 8 derived.",
+    "",
+    "NO GENERATED LETTERING ANYWHERE IN THIS REPOSITORY, and that is the manifest's decision rather",
+    "than mine. §2.14 lists `keyart/wordmark-ground` — a GROUND for a wordmark — and no wordmark.",
+    "The brand run measured FLUX misspelling text on wide compositions ('Home on the Ridge' for a",
+    "wordmark that said something else) while Qwen scored 9/9 on lettering, so type is set by the",
+    "client over a generated ground rather than asked of either model.",
+    "",
+    "That has a consequence the comparison must state rather than bury: the ONE criterion Qwen",
+    "previously won outright is not exercised by this set. COMPARISON.md §4 says so.",
+    "",
+    "The derived eight: og-1200x630 is cropped from keyart/wide because 630 is not a multiple of 16",
+    "and is therefore never requested (§2.1); social-wide is cropped from keyart/hero; and the six",
+    "chrome sizes are all cut or composited from chrome/mark — the accounting Aetherholm's run",
+    "recorded at 20-aetherholm.md:184."
+  ],
+  "accent": "#6d9a49",
+  "mark": "a single mosaic tessera — one small square fired tile seen face on and very slightly turned — sitting above the ash ridge every CloudsForge estate mark shares: one flat baseline with a single shallow arc rising from its centre, like the face of an anvil seen from the front. Two elements only, the tile and the ridge, and the tile never touches the ridge.",
+  "keyart": [
+    {
+      "slug": "hero",
+      "width": 2048,
+      "height": 1152,
+      "ground": "scene",
+      "subject": "the wide establishing view of a Tessera ward at dusk: an isometric mosaic of claimed ground running away from the viewer, lantern-lit frontages along a public Way, a Gate arch glowing at the far end where arrivals land, small figures walking, and the ward's kilns smoking on the ridge behind"
+    },
+    {
+      "slug": "wide",
+      "width": 2048,
+      "height": 768,
+      "ground": "scene",
+      "subject": "a long horizontal band of the Mosaic seen from above and to one side: tile ground giving way to path, a row of open workshop fronts with their gates up, one lit beacon at the right, the whole strip reading as a place people are walking through. The right third is deliberately the darkest and emptiest part of the picture"
+    },
+    {
+      "slug": "social-square",
+      "width": 1024,
+      "height": 1024,
+      "ground": "scene",
+      "subject": "one Homestead parcel seen close: a small claimed square of ground with a doorway, a lit lantern post, a rug, a potted fern and one seated figure — the smallest complete version of the whole world, warm against the dark"
+    },
+    {
+      "slug": "wordmark-ground",
+      "width": 1536,
+      "height": 512,
+      "ground": "scene",
+      "subject": "a wide, deliberately near-empty ground for a title to be set on: warm ash dark falling away at every edge, one low band of kilnyard silhouette along the bottom edge with two small ember glows in it, and the entire upper two thirds left as clear unbroken dark with nothing drawn in it at all"
+    }
+  ],
+  "chrome": [
+    { "slug": "mark", "width": 1024, "height": 1024, "ground": "flat" },
+    { "slug": "capsule", "width": 1024, "height": 512, "ground": "flat" }
+  ],
+  "splashes": [
+    { "slug": "firstlight", "name": "Firstlight", "subject": "the launch season: the first Gate opening at dawn on empty ashfield ground, one arch lit and a single line of figures walking in from nothing, the mosaic unclaimed and open in every direction" },
+    { "slug": "the-long-dusk", "name": "The Long Dusk", "subject": "a season of low ember light: the whole ward held at last light, every lantern lit at once along a Way, long cool shadows thrown across warm tile ground" },
+    { "slug": "harvest-of-tesserae", "name": "Harvest of Tesserae", "subject": "a season of making: crates and racks of freshly fired tiles stacked in a kilnyard, makers carrying them out, the ground itself half-laid in new mosaic" },
+    { "slug": "the-open-kiln", "name": "The Open Kiln", "subject": "the Kiln thrown open to the ward: its arched mouth blazing, a queue of people around it with objects to fire, heat shimmer over the crowd" },
+    { "slug": "ward-founding", "name": "Ward Founding", "subject": "a new ward minting: a bare grid of unclaimed ground with the first boundary stones going in, one Gate raised at its centre and Ways being marked out across the empty tiles" },
+    { "slug": "the-quiet-hours", "name": "The Quiet Hours", "subject": "the ward at deep night with almost nobody in it: two lit windows, one lantern still burning over an empty bench, and the tile ground going blue-black away into the dark" }
+  ]
+}

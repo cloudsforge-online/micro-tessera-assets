@@ -1,0 +1,38 @@
+{
+  "$comment": [
+    "The structure kit: building parts players assemble rather than model.",
+    "docs/ecosystem/23-tessera.md §2.7. 24 parts, 512x512, slug form structure/<slug>.",
+    "",
+    "The whole reason this set exists is §1: neither model emits a mesh, so a player cannot BUILD a",
+    "house in Tessera the way they could in the reference — they assemble one out of authored",
+    "parts. Six walls, three doors, three windows, three stairs, three roofs, three floors and",
+    "three fences is the smallest kit that composes into a building anyone would recognise as",
+    "theirs, and every one of them registers against the same 2:1 dimetric grid."
+  ],
+  "parts": [
+    { "slug": "wall-plain", "group": "wall", "subject": "a plain rendered wall section, one storey, flat unbroken face with a shallow plinth" },
+    { "slug": "wall-plaster", "group": "wall", "subject": "a lime-plastered wall section, one storey, the plaster crazed and patched, ochre-warm" },
+    { "slug": "wall-brick", "group": "wall", "subject": "a fired brick wall section, one storey, courses clearly laid, a soldier course at the head" },
+    { "slug": "wall-timber", "group": "wall", "subject": "a timber-framed wall section, one storey, dark exposed frame with pale infill panels" },
+    { "slug": "wall-glass", "group": "wall", "subject": "an iron-framed glazing wall section, one storey, small green panes in a riveted grid" },
+    { "slug": "wall-half", "group": "wall", "subject": "a half-height wall section, waist high, with a flat coping stone along the top" },
+    { "slug": "door-single", "group": "door", "subject": "a single plank door in its frame, closed, with a strap hinge and a ring handle" },
+    { "slug": "door-double", "group": "door", "subject": "a pair of tall double doors in one frame, closed, with a central drop bolt" },
+    { "slug": "door-arched", "group": "door", "subject": "an arched door in a round-headed stone surround, closed, studded with nails" },
+    { "slug": "window-square", "group": "window", "subject": "a square multi-pane casement window with a stone sill and open shutters" },
+    { "slug": "window-round", "group": "window", "subject": "a round porthole window in a moulded surround, one pane, leaded" },
+    { "slug": "window-tall", "group": "window", "subject": "a tall narrow sash window, two lights, with a slim sill and no shutters" },
+    { "slug": "stair-straight", "group": "stair", "subject": "a straight external stair of eight stone steps with an open side" },
+    { "slug": "stair-corner", "group": "stair", "subject": "a stair turning a quarter at a square landing, timber treads on a stone base" },
+    { "slug": "stair-spiral", "group": "stair", "subject": "a tight iron spiral stair around a central post, one full turn, open risers" },
+    { "slug": "roof-gable", "group": "roof", "subject": "a gable roof section with a pitched slate face and an exposed timber barge board" },
+    { "slug": "roof-flat", "group": "roof", "subject": "a flat roof section with a low parapet and a lead-lined gutter at one edge" },
+    { "slug": "roof-tiled", "group": "roof", "subject": "a pantiled roof section, overlapping curved terracotta tiles, one ridge tile at the top" },
+    { "slug": "floor-plank", "group": "floor", "subject": "a floor section of wide timber planks, lying flat, running one way, worn along the joints" },
+    { "slug": "floor-stone", "group": "floor", "subject": "a floor section of irregular stone flags, lying flat, mortar worn low between them" },
+    { "slug": "floor-tile", "group": "floor", "subject": "a floor section of small glazed tiles in a simple two-colour chequer, lying flat" },
+    { "slug": "fence-picket", "group": "fence", "subject": "a run of pointed timber picket fence with two rails, paint flaking" },
+    { "slug": "fence-iron", "group": "fence", "subject": "a run of iron railing, plain uprights with spear heads and a top rail" },
+    { "slug": "fence-hedge", "group": "fence", "subject": "a run of clipped hedge to waist height, dense and squared off" }
+  ]
+}

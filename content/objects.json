@@ -1,0 +1,200 @@
+{
+  "$comment": [
+    "The platform-authored seed set: twelve categories of eight, free to every account forever,",
+    "never sold, never removed. docs/ecosystem/23-tessera.md §2.6 and §7.2.",
+    "",
+    "Its SIZE IS A COMMITMENT, not an estimate — §7.2 rests the whole no-pay-to-win argument on",
+    "\"96 seed objects, free to every account forever, plus a free daily firing allowance. Nobody is",
+    "ever unable to build.\" A trimmed seed set would quietly convert that argument into a slogan.",
+    "",
+    "`footprint` is a FIELD, not something the model is asked to infer (§2.6). A 1x1 object occupies",
+    "one 256x128 floor tile and is authored on 512x512 — three tiles of headroom, so a lamp-post",
+    "fits. A 2x2 uses the same canvas at half the depicted scale.",
+    "",
+    "ONE canonical facing each. The second facing is a horizontal mirror applied at render time,",
+    "which is forced rather than lazy: micro-studio has no `seed` column (studio/src/migrations.ts",
+    ":154-252), and a pipeline that cannot fix a seed cannot render the same chair four times."
+  ],
+  "categories": [
+    {
+      "id": "seating",
+      "name": "Seating",
+      "glyph": "a simple chair seen from the side, seat and back only",
+      "items": [
+        { "slug": "stool", "footprint": "1x1", "subject": "a low three-legged wooden stool with a round dished seat" },
+        { "slug": "bench", "footprint": "2x2", "subject": "a plain two-person bench of planed timber with square legs and no back" },
+        { "slug": "armchair", "footprint": "1x1", "subject": "a deep upholstered armchair with rolled arms and a sagging cushion" },
+        { "slug": "floor-cushion", "footprint": "1x1", "subject": "a fat square floor cushion of woven cloth, tufted at the corners" },
+        { "slug": "long-bench", "footprint": "2x2", "subject": "a long refectory bench of dark timber, four legs, worn pale along its top edge" },
+        { "slug": "stump-seat", "footprint": "1x1", "subject": "a sawn tree stump used as a seat, bark still on, rings showing on top" },
+        { "slug": "hammock", "footprint": "2x2", "subject": "a slung rope hammock between two short posts, sagging in the middle" },
+        { "slug": "high-chair", "footprint": "1x1", "subject": "a tall spindle-backed bar chair with a footrail" }
+      ]
+    },
+    {
+      "id": "surfaces",
+      "name": "Surfaces",
+      "glyph": "a table seen from the side, flat top on four legs",
+      "items": [
+        { "slug": "work-table", "footprint": "2x2", "subject": "a heavy square work table of scarred timber with a thick top and stretcher rails" },
+        { "slug": "round-table", "footprint": "1x1", "subject": "a small round pedestal table on a turned central column and three feet" },
+        { "slug": "counter", "footprint": "2x2", "subject": "a shop counter with a panelled front and a worn stone top" },
+        { "slug": "desk", "footprint": "2x2", "subject": "a writing desk with a shallow drawer, slim tapered legs and a leather-inset top" },
+        { "slug": "low-table", "footprint": "1x1", "subject": "a low square table barely knee high, with plain block legs" },
+        { "slug": "slab", "footprint": "2x2", "subject": "a raw stone slab laid across two brick piers as a working surface" },
+        { "slug": "market-trestle", "footprint": "2x2", "subject": "a folding trestle table with crossed legs and loose boards on top" },
+        { "slug": "potting-bench", "footprint": "2x2", "subject": "a potting bench with a spilled soil tray, a slatted shelf beneath and pots underneath" }
+      ]
+    },
+    {
+      "id": "storage",
+      "name": "Storage",
+      "glyph": "a crate seen in three-quarter view, banded lid",
+      "items": [
+        { "slug": "crate", "footprint": "1x1", "subject": "a square wooden shipping crate with banded corners and a nailed lid" },
+        { "slug": "barrel", "footprint": "1x1", "subject": "an upright coopered barrel with iron hoops and a domed head" },
+        { "slug": "chest", "footprint": "1x1", "subject": "a domed-lid travelling chest with iron strapping and a hasp" },
+        { "slug": "shelf-unit", "footprint": "2x2", "subject": "an open four-shelf standing unit of plain timber, tall and narrow" },
+        { "slug": "cabinet", "footprint": "2x2", "subject": "a closed two-door cabinet with panelled doors and a shallow cornice" },
+        { "slug": "basket-stack", "footprint": "1x1", "subject": "three woven willow baskets stacked and leaning slightly" },
+        { "slug": "wall-rack", "footprint": "1x1", "subject": "a wall-mounted rack of pegs and a single shelf, hung with cloth and hooks" },
+        { "slug": "strongbox", "footprint": "1x1", "subject": "a small heavy iron-bound strongbox low to the ground, with a plate lock" }
+      ]
+    },
+    {
+      "id": "lighting",
+      "name": "Lighting",
+      "glyph": "a hanging lantern with a bail handle",
+      "items": [
+        { "slug": "lantern-post", "footprint": "1x1", "subject": "a tall iron lamp-post with a glazed lantern head, lit warm" },
+        { "slug": "wall-sconce", "footprint": "1x1", "subject": "an iron wall sconce holding one lit candle, with a small backplate" },
+        { "slug": "brazier", "footprint": "1x1", "subject": "a footed iron brazier full of glowing coals, throwing warm light upward" },
+        { "slug": "hanging-lamp", "footprint": "1x1", "subject": "a lamp on a long chain with a wide conical shade, hanging free" },
+        { "slug": "candle-cluster", "footprint": "1x1", "subject": "a cluster of five candles of different heights on a low tray, all lit" },
+        { "slug": "lantern-string", "footprint": "2x2", "subject": "a swag of small paper lanterns strung between two short poles, lit warm" },
+        { "slug": "floor-lamp", "footprint": "1x1", "subject": "a slim standing floor lamp with a fabric drum shade and a weighted foot" },
+        { "slug": "ember-bowl", "footprint": "1x1", "subject": "a shallow ceramic bowl of banked embers on a stone base, glowing" }
+      ]
+    },
+    {
+      "id": "structure",
+      "name": "Structure",
+      "glyph": "an arched doorway opening",
+      "items": [
+        { "slug": "doorway-arch", "footprint": "1x1", "subject": "a free-standing round-headed doorway arch of dressed stone, open through" },
+        { "slug": "window-frame", "footprint": "1x1", "subject": "a square timber window frame with small glazed panes and a sill" },
+        { "slug": "pillar", "footprint": "1x1", "subject": "a stout stone pillar with a plain square base and a simple capital" },
+        { "slug": "staircase", "footprint": "2x2", "subject": "a straight flight of six timber steps with an open side and one handrail" },
+        { "slug": "balustrade", "footprint": "2x2", "subject": "a run of stone balustrade, turned balusters under a flat rail" },
+        { "slug": "awning", "footprint": "2x2", "subject": "a striped canvas awning on two iron arms, angled out over nothing" },
+        { "slug": "gate-post", "footprint": "1x1", "subject": "a single square gate post of stone with an iron hinge pin and a capped top" },
+        { "slug": "roof-vent", "footprint": "1x1", "subject": "a small louvred roof vent cupola with a lead cap" }
+      ]
+    },
+    {
+      "id": "flooring",
+      "name": "Flooring",
+      "glyph": "a rectangular rug seen in three-quarter view, fringed",
+      "items": [
+        { "slug": "rug-woven", "footprint": "2x2", "subject": "a flat woven rectangular rug in banded warm colours, fringed at both ends, lying flat" },
+        { "slug": "rug-round", "footprint": "1x1", "subject": "a round braided rag rug in concentric rings, lying flat" },
+        { "slug": "tile-inlay", "footprint": "2x2", "subject": "a square panel of glazed floor tiles in a simple two-colour pattern, lying flat" },
+        { "slug": "boardwalk-patch", "footprint": "2x2", "subject": "a patch of salt-bleached boardwalk decking, planks running one way, lying flat" },
+        { "slug": "mosaic-medallion", "footprint": "2x2", "subject": "a circular tesserae mosaic medallion with a knot pattern at its centre, lying flat" },
+        { "slug": "straw-mat", "footprint": "1x1", "subject": "a plaited straw mat with a bound edge, lying flat" },
+        { "slug": "hearth-slab", "footprint": "1x1", "subject": "a slab of fired hearthstone, scorched dark in the centre, lying flat" },
+        { "slug": "painted-circle", "footprint": "2x2", "subject": "a painted circle on bare ground, pigment worn thin at its edge, lying flat" }
+      ]
+    },
+    {
+      "id": "foliage",
+      "name": "Foliage",
+      "glyph": "a leafy sprig in a pot",
+      "items": [
+        { "slug": "potted-fern", "footprint": "1x1", "subject": "a spreading fern in a terracotta pot, fronds arching over the rim" },
+        { "slug": "sapling", "footprint": "1x1", "subject": "a young slender sapling with a staked trunk and a light crown of leaves" },
+        { "slug": "hedge-block", "footprint": "2x2", "subject": "a clipped rectangular box hedge, dense and flat-topped" },
+        { "slug": "flower-trough", "footprint": "2x2", "subject": "a long timber trough planted with mixed flowers spilling over its sides" },
+        { "slug": "climbing-vine", "footprint": "1x1", "subject": "a climbing vine on a slim trellis, leaves dense at the top" },
+        { "slug": "mushroom-cluster", "footprint": "1x1", "subject": "a cluster of pale domed mushrooms of varying heights growing from loam" },
+        { "slug": "reed-clump", "footprint": "1x1", "subject": "a clump of tall reeds with feathered heads, leaning apart" },
+        { "slug": "branch-vase", "footprint": "1x1", "subject": "a tall narrow vase holding three bare branches" }
+      ]
+    },
+    {
+      "id": "signage",
+      "name": "Signage",
+      "glyph": "a hanging shop sign on a bracket arm",
+      "items": [
+        { "slug": "hanging-shopsign", "footprint": "1x1", "subject": "a blank painted shop sign hanging from an iron bracket arm, swinging free" },
+        { "slug": "sandwich-board", "footprint": "1x1", "subject": "an A-frame sandwich board with two blank chalk faces" },
+        { "slug": "painted-wallsign", "footprint": "2x2", "subject": "a flat rectangular painted wall sign board with a plain border and an empty field" },
+        { "slug": "banner-vertical", "footprint": "1x1", "subject": "a long vertical cloth banner on a pole, hanging straight, blank" },
+        { "slug": "notice-board", "footprint": "2x2", "subject": "a roofed notice board on two legs, blank paper sheets pinned to a cork field" },
+        { "slug": "direction-post", "footprint": "1x1", "subject": "a fingerpost with three blank pointing boards at different heights" },
+        { "slug": "number-plaque", "footprint": "1x1", "subject": "a small oval enamel plaque on a short stake, blank" },
+        { "slug": "pennant-line", "footprint": "2x2", "subject": "a line of triangular cloth pennants strung between two poles" }
+      ]
+    },
+    {
+      "id": "machines",
+      "name": "Machines",
+      "glyph": "a toothed gear wheel with a spindle",
+      "items": [
+        { "slug": "hand-press", "footprint": "1x1", "subject": "a cast-iron hand press with a screw column and a long lever arm" },
+        { "slug": "loom", "footprint": "2x2", "subject": "an upright timber floor loom strung with warp threads and a beater bar" },
+        { "slug": "bellows", "footprint": "1x1", "subject": "a large pair of leather forge bellows on a timber frame with a long handle" },
+        { "slug": "water-pump", "footprint": "1x1", "subject": "an iron hand water pump on a stone base with a curved spout and a long handle" },
+        { "slug": "orrery", "footprint": "1x1", "subject": "a brass orrery of nested rings and small spheres on a turned wooden stand" },
+        { "slug": "still", "footprint": "1x1", "subject": "a copper pot still with a swan-neck and a coiled condenser over a small firebox" },
+        { "slug": "grindstone", "footprint": "1x1", "subject": "a treadle grindstone: a round stone wheel in a timber frame with a foot pedal" },
+        { "slug": "small-kiln", "footprint": "2x2", "subject": "a squat brick bottle kiln with an arched stoke mouth glowing warm inside" }
+      ]
+    },
+    {
+      "id": "instruments",
+      "name": "Instruments",
+      "glyph": "a lute body with a fretted neck",
+      "items": [
+        { "slug": "upright-piano", "footprint": "2x2", "subject": "an upright piano with the lid closed, candle brackets and a bench pushed in" },
+        { "slug": "drum-pair", "footprint": "1x1", "subject": "two hide drums of different heights, roped and tensioned, standing together" },
+        { "slug": "lute", "footprint": "1x1", "subject": "a round-backed lute leaning against nothing, neck angled back" },
+        { "slug": "chimes", "footprint": "1x1", "subject": "a rack of hanging metal tube chimes of graduated length with a striker" },
+        { "slug": "horn-stand", "footprint": "1x1", "subject": "a brass horn coiled on a slim floor stand" },
+        { "slug": "music-stand", "footprint": "1x1", "subject": "a folding iron music stand with an empty perforated desk" },
+        { "slug": "gramophone", "footprint": "1x1", "subject": "a gramophone with a flared brass horn on a square cabinet base" },
+        { "slug": "bell", "footprint": "1x1", "subject": "a cast bronze bell hung in a small timber yoke with a pull rope" }
+      ]
+    },
+    {
+      "id": "vehicles",
+      "name": "Vehicles",
+      "glyph": "a two-wheeled handcart seen from the side",
+      "items": [
+        { "slug": "handcart", "footprint": "2x2", "subject": "a two-wheeled timber handcart with long shafts resting on the ground" },
+        { "slug": "moored-rowboat", "footprint": "2x2", "subject": "a small clinker rowboat with oars shipped, sitting low as if moored" },
+        { "slug": "leaning-bicycle", "footprint": "1x1", "subject": "an old bicycle with a front basket, leaning on its own kickstand" },
+        { "slug": "wheelbarrow", "footprint": "1x1", "subject": "a single-wheel timber wheelbarrow with iron braces, tipped forward on its legs" },
+        { "slug": "sledge", "footprint": "2x2", "subject": "a low timber sledge on iron-shod runners with a rope loop at the front" },
+        { "slug": "palanquin", "footprint": "2x2", "subject": "a curtained palanquin box with two long carrying poles, set down on its feet" },
+        { "slug": "cargo-trolley", "footprint": "1x1", "subject": "a small iron cargo trolley with four castors and a low rail" },
+        { "slug": "dry-docked-skiff", "footprint": "2x2", "subject": "a small skiff propped upright on two timber cradles, hull showing" }
+      ]
+    },
+    {
+      "id": "ornament",
+      "name": "Ornament",
+      "glyph": "a footed urn with two handles",
+      "items": [
+        { "slug": "statue-bust", "footprint": "1x1", "subject": "a weathered stone portrait bust on a square plinth, face worn smooth" },
+        { "slug": "tall-urn", "footprint": "1x1", "subject": "a tall two-handled ceramic urn with a glazed shoulder, standing on a foot" },
+        { "slug": "wind-mobile", "footprint": "1x1", "subject": "a hanging mobile of thin metal shapes on wires, turning free" },
+        { "slug": "standing-mirror", "footprint": "1x1", "subject": "a full-length cheval mirror in a tilting timber frame" },
+        { "slug": "birdcage", "footprint": "1x1", "subject": "a domed wire birdcage on a slim stand, door open, empty" },
+        { "slug": "folding-screen", "footprint": "2x2", "subject": "a three-panel folding screen with painted cloth panels, standing zigzagged" },
+        { "slug": "small-fountain", "footprint": "2x2", "subject": "a low circular stone fountain basin with a small central spout and still water" },
+        { "slug": "wall-mask", "footprint": "1x1", "subject": "a carved wooden face mask, hung flat as an ornament" }
+      ]
+    }
+  ]
+}

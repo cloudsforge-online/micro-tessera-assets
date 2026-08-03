@@ -1,0 +1,134 @@
+{
+  "$comment": [
+    "The eight ward archetypes, from docs/ecosystem/23-tessera.md §2.4 and §6.1.",
+    "",
+    "CANONICAL. doc 23 §6 says the trees live as JSON in THIS repository so the engine and the art",
+    "prompts read the same file and cannot drift — the Emberkin pattern (19-new-products.md:86).",
+    "micro-tessera does not exist yet; when it does it reads this file rather than restating it.",
+    "That inversion is what micro-aetherholm-assets got wrong in the other direction and had to",
+    "record in its README: two content sources is the drift defect this estate keeps paying for.",
+    "",
+    "`description` is the substitution in the plate prompt template quoted at §2.4, verbatim.",
+    "`horizon` is the substitution in the backdrop template. `light` is the time-of-day clause.",
+    "",
+    "PLATES, not tiles. A plate is a flat-on painterly material sheet: diffusion cannot hold an",
+    "isometric seam, so the seam is produced by project_iso.py from a plate that never had to tile.",
+    "Four plates per ward x eight wards = 32 generations; twelve tiles per ward x eight = 96",
+    "derivations. §2.5."
+  ],
+  "plates": ["ground", "path", "verge", "water"],
+  "platePhrase": {
+    "ground": "open ground surface",
+    "path": "a worn walking path surface",
+    "verge": "the verge where the path meets the ground, edged",
+    "water": "standing water surface"
+  },
+  "tiles": [
+    "ground-a",
+    "ground-b",
+    "ground-worn",
+    "path-straight",
+    "path-corner",
+    "path-tee",
+    "verge",
+    "verge-corner",
+    "step",
+    "water",
+    "water-edge",
+    "rubble"
+  ],
+  "$tiles": [
+    "Twelve derived tiles per ward, cut and projected from that ward's four plates by",
+    "project_iso.py. ground-a and ground-b are cut from DIFFERENT REGIONS OF THE SAME PLATE so the",
+    "ground varies without a second generation — §2.5. This is where painterly earns its keep:",
+    "two cuts of one painting agree with each other and two vector tiles would not.",
+    "",
+    "`from` names the plate each tile is cut from; `region` is the normalised (x, y) centre of the",
+    "cut within that plate, so two tiles off one plate are provably different pixels."
+  ],
+  "tileSources": {
+    "ground-a": { "from": "ground", "region": [0.28, 0.3] },
+    "ground-b": { "from": "ground", "region": [0.72, 0.68] },
+    "ground-worn": { "from": "ground", "region": [0.5, 0.86] },
+    "path-straight": { "from": "path", "region": [0.5, 0.5] },
+    "path-corner": { "from": "path", "region": [0.3, 0.3] },
+    "path-tee": { "from": "path", "region": [0.7, 0.5] },
+    "verge": { "from": "verge", "region": [0.5, 0.5] },
+    "verge-corner": { "from": "verge", "region": [0.3, 0.7] },
+    "step": { "from": "verge", "region": [0.7, 0.28] },
+    "water": { "from": "water", "region": [0.5, 0.5] },
+    "water-edge": { "from": "water", "region": [0.5, 0.82] },
+    "rubble": { "from": "ground", "region": [0.14, 0.62] }
+  },
+  "wards": [
+    {
+      "id": "ashfield",
+      "name": "Ashfield",
+      "description": "warm grey volcanic grit, ember-lit, fine cinder and scattered basalt chips, the founding ward",
+      "horizon": "a low volcanic plain of warm grey cinder under a bank of ash cloud, with the founding ward's chimneys and lantern lines strung across the middle distance and one ember glow banked at the horizon",
+      "accent": "#e8622c",
+      "timeOfDay": ["dusk", "night"]
+    },
+    {
+      "id": "terrace",
+      "name": "Terrace",
+      "description": "cut stone steps and planted ledges climbing a slope, dry-laid limestone risers, moss in the joints",
+      "horizon": "a hillside of cut stone terraces climbing away in shallow steps, planted ledges spilling green over their edges, dwellings set into the slope and a warm haze in the cut of the valley",
+      "accent": "#8fa06a",
+      "timeOfDay": []
+    },
+    {
+      "id": "wharf",
+      "name": "Wharf",
+      "description": "salt-bleached boards over dark water, rope, tar and iron cleats, weathered pale silver-grey timber",
+      "horizon": "a working waterfront of salt-bleached boardwalk and pilings over dark water, moored hulls and a forest of rope and mast, warehouse fronts behind and a wide flat estuary beyond",
+      "accent": "#5f8fa8",
+      "timeOfDay": ["dusk", "night"]
+    },
+    {
+      "id": "undercroft",
+      "name": "Undercroft",
+      "description": "vaulted brick beneath the city, lamplit, no sky, damp red brick and worn flagstone",
+      "horizon": "a vaulted brick undercroft running away into lamplit dark, ribbed arches repeating into the distance, no sky anywhere, water standing bright between the flags",
+      "accent": "#a4634a",
+      "timeOfDay": []
+    },
+    {
+      "id": "glasshouse",
+      "name": "Glasshouse",
+      "description": "iron frame and green glass, condensation, hot light, riveted ironwork and pale gravel underfoot",
+      "horizon": "the inside of a vast iron-and-glass house, green panes fogged with condensation, hot light coming down through the ribs of the roof, planting beds running away in rows",
+      "accent": "#6d9a49",
+      "timeOfDay": ["dusk", "night"]
+    },
+    {
+      "id": "kilnyard",
+      "name": "Kilnyard",
+      "description": "fired clay, brick stacks, heat shimmer, terracotta dust and scorched firebrick, the maker's ward",
+      "horizon": "a yard of bottle kilns and stacked firebrick under heat shimmer, terracotta dust in the air catching the light, a working ward with smoke leaning off the stacks",
+      "accent": "#d2703a",
+      "timeOfDay": []
+    },
+    {
+      "id": "grove",
+      "name": "Grove",
+      "description": "deep loam, moss, filtered canopy light, leaf litter and exposed root over dark soil",
+      "horizon": "deep woodland of tall trunks with light filtering down through a high canopy, moss and leaf litter on the floor, a clearing opening into warm light at the middle distance",
+      "accent": "#5f8a4a",
+      "timeOfDay": ["dusk", "night"]
+    },
+    {
+      "id": "saltflat",
+      "name": "Saltflat",
+      "description": "cracked white pan, mineral crust, huge flat sky, polygonal salt plates over pale grey clay",
+      "horizon": "an immense cracked white salt pan running flat to a very distant horizon under an enormous sky, mineral crust catching low light, one thin line of structures far off",
+      "accent": "#c8bfae",
+      "timeOfDay": []
+    }
+  ],
+  "timeOfDay": {
+    "day": "flat even daylight, high sun, the ward's own colours at full strength",
+    "dusk": "low warm ember light raking in from one side, long cool shadows, the sky burning down to ash at the horizon",
+    "night": "lamplight only — warm pools of lantern light against deep cool blue dark, the sky black and the ward reading by its own lights"
+  }
+}

@@ -1,0 +1,28 @@
+# Nothing that could carry a credential. The Foundry key is a SPEND credential: it is read from
+# ../studio/.env.local at run time, held in one variable, and never written here.
+.env
+.env.*
+*.env
+
+# Review scaffolding. Contact sheets are built from the assets on demand and are not artefacts.
+#
+# Written as `review/*` rather than `review/`, and that detail is load-bearing: git will not
+# re-include a file inside an EXCLUDED DIRECTORY, so a `!review/compare/artefacts.json` under
+# `review/` silently does nothing. Excluding the contents instead leaves the directory itself
+# visible so the one exception below can take effect.
+review/*
+# The exception. The artefact tally is a HUMAN JUDGEMENT made by looking at the sheets, not
+# something a rebuild reproduces, and it is the evidence behind comparison criterion 4.
+!review/compare/
+review/compare/*
+!review/compare/artefacts.json
+
+# Python and editor debris.
+__pycache__/
+*.pyc
+.DS_Store
+
+# Managed Compute deployment windows are recorded per candidate in
+# candidates/<id>/DEPLOYMENT.json and ARE committed — the bill is wall-clock, so when the
+# deployment existed is provenance. Nothing else about a candidate endpoint is: the scoring URI
+# and its key live only in the gitignored studio/.env.local.

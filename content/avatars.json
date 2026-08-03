@@ -1,0 +1,103 @@
+{
+  "$comment": [
+    "The paper doll. docs/ecosystem/23-tessera.md §2.8 and §6.3.",
+    "",
+    "One base plus overlays composited at render time, which is how a 2D world gets combinatorial",
+    "appearance out of 48 assets instead of thousands: 4 builds x 8^5 = 131,072 distinct avatars",
+    "before colourway. All 48 are 256x512 and therefore NON-SQUARE, so they are the largest block",
+    "of assets in this repository exposed to Qwen's transposed `size`.",
+    "",
+    "REGISTRATION IS THE FAILURE THAT HIDES. Every overlay is generated against the same base",
+    "silhouette, stated in the prompt below and checked by verify.py check 7 as a bounding-box",
+    "containment test. A misregistered overlay is invisible in a contact sheet and obvious in play —",
+    "which is the definition of a check worth automating."
+  ],
+  "silhouette": "a standing adult figure occupying the centre of a tall narrow frame, head near the top with a small margin above it, feet just above the bottom edge, arms at the sides, the whole figure about two thirds of the frame width and centred left to right",
+  "builds": [
+    { "id": "a", "subject": "a slight, narrow-shouldered adult of average height" },
+    { "id": "b", "subject": "a broad, heavy-set adult of average height" },
+    { "id": "c", "subject": "a tall, long-limbed adult" },
+    { "id": "d", "subject": "a short, sturdy, compact adult" }
+  ],
+  "poses": [
+    { "id": "front", "subject": "seen from directly in front, weight even, arms relaxed at the sides" },
+    { "id": "side", "subject": "seen from the left side in profile, weight even, arms relaxed at the sides" }
+  ],
+  "slots": [
+    {
+      "id": "hair",
+      "name": "Hair",
+      "region": "the head only — the top quarter of the frame; everything below the jaw is empty",
+      "items": [
+        { "slug": "crop", "subject": "a short cropped haircut, close at the sides" },
+        { "slug": "braid", "subject": "a single thick braid falling over one shoulder" },
+        { "slug": "long-loose", "subject": "long loose hair falling past the shoulders" },
+        { "slug": "topknot", "subject": "hair gathered up into a high topknot" },
+        { "slug": "curls", "subject": "a dense round mass of tight curls" },
+        { "slug": "shaved", "subject": "a shaved head with a faint shadow of stubble" },
+        { "slug": "wrapped", "subject": "a cloth head wrap tied at the back, hair hidden" },
+        { "slug": "tousled", "subject": "mid-length tousled hair, parted roughly and falling forward" }
+      ]
+    },
+    {
+      "id": "top",
+      "name": "Top",
+      "region": "the torso and arms — from the shoulders to the hips; the head and legs are empty",
+      "items": [
+        { "slug": "tunic", "subject": "a belted knee-length tunic with three-quarter sleeves" },
+        { "slug": "jacket", "subject": "a short buttoned jacket with turned cuffs" },
+        { "slug": "apron-smock", "subject": "a working smock with a bib apron over it, pockets at the front" },
+        { "slug": "shirt-sleeves", "subject": "a plain shirt with the sleeves rolled to the elbow" },
+        { "slug": "shawl", "subject": "a heavy knitted shawl wrapped across the chest and pinned" },
+        { "slug": "long-coat", "subject": "a long open coat reaching to mid-calf, collar up" },
+        { "slug": "vest", "subject": "a fitted sleeveless vest over a plain undershirt" },
+        { "slug": "robe", "subject": "a loose full-length robe with a wide sash at the waist" }
+      ]
+    },
+    {
+      "id": "legs",
+      "name": "Legs",
+      "region": "the hips to the ankles; the torso, head and feet are empty",
+      "items": [
+        { "slug": "trousers", "subject": "straight-cut work trousers, slightly loose" },
+        { "slug": "long-skirt", "subject": "a long plain skirt falling to the ankle" },
+        { "slug": "work-shorts", "subject": "cut-off knee-length work shorts" },
+        { "slug": "wrap-skirt", "subject": "a wrapped skirt with an overlapping front panel, mid-calf" },
+        { "slug": "breeches", "subject": "fitted breeches gathered and buttoned below the knee" },
+        { "slug": "layered-skirt", "subject": "a layered skirt of two tiers, the under tier longer" },
+        { "slug": "overalls", "subject": "bib overalls with a front pocket and shoulder straps" },
+        { "slug": "leggings", "subject": "close-fitting leggings to the ankle" }
+      ]
+    },
+    {
+      "id": "feet",
+      "name": "Feet",
+      "region": "the ankles and feet only — the bottom eighth of the frame; everything above is empty",
+      "items": [
+        { "slug": "boots", "subject": "ankle-height laced leather boots" },
+        { "slug": "sandals", "subject": "flat strapped sandals" },
+        { "slug": "clogs", "subject": "wooden clogs with a shaped sole" },
+        { "slug": "bare", "subject": "bare feet" },
+        { "slug": "tall-boots", "subject": "tall boots reaching to below the knee, turned at the top" },
+        { "slug": "slippers", "subject": "soft flat slippers" },
+        { "slug": "work-shoes", "subject": "heavy laced work shoes with a thick sole" },
+        { "slug": "wrapped", "subject": "feet bound in cloth wrappings and cord" }
+      ]
+    },
+    {
+      "id": "held",
+      "name": "Held",
+      "region": "one hand at the figure's side — the middle of the frame at hip height; the rest of the frame is empty",
+      "items": [
+        { "slug": "satchel", "subject": "a leather satchel hanging from a long strap" },
+        { "slug": "lantern", "subject": "a small lit lantern carried by its bail handle" },
+        { "slug": "tool-belt", "subject": "a slung tool belt with a hammer and a rule in its loops" },
+        { "slug": "sketchbook", "subject": "a closed sketchbook held against the hip" },
+        { "slug": "basket", "subject": "a woven basket carried at the side" },
+        { "slug": "umbrella", "subject": "a furled umbrella held like a stick" },
+        { "slug": "cat", "subject": "a cat carried in the crook of one arm" },
+        { "slug": "walking-stick", "subject": "a plain wooden walking stick planted on the ground" }
+      ]
+    }
+  ]
+}
