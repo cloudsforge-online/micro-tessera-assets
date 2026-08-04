@@ -3,7 +3,7 @@
 > ## CONCLUDED. This is a record, not an open evaluation.
 >
 > **FLUX 2 Pro ships.** The Qwen-Image 2512 challenger was generated in full (288 assets + 104
-> derivatives, 741 files, 146 MB), judged against the criteria below, and lost on criterion 1 by
+> derivatives, 392 images in 394 files), judged against the criteria below, and lost on criterion 1 by
 > margins nothing else offsets. The owner has since withdrawn that model from the estate, and
 > **its images, its manifest, its deployment record and its registry entry have been deleted from
 > this repository.** What it measured is here. The evaluation is closed; nothing is waiting on a
@@ -12,7 +12,7 @@
 > **Read the numbers below as history that was taken, not as claims you can re-derive.** Every one
 > of them was measured off the candidate's bytes while those bytes existed. Where a figure used to
 > point at `candidates/qwen-image-2512/DEPLOYMENT.json`, that file is gone and the figure has been
-> transcribed into §8.5 so that deleting 741 images did not delete the reason the estate chose what
+> transcribed into §8.5 so that deleting 392 images did not delete the reason the estate chose what
 > it chose.
 >
 > **What survived the deletion, and can still be checked today:** `review/compare/artefacts.json`,

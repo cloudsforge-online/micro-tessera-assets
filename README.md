@@ -13,7 +13,8 @@ browser tab. **392 assets — 288 generated, 104 derived** — specified by
 
 A **Qwen-Image 2512** challenger was generated in full and judged against criteria fixed in
 [COMPARISON.md](COMPARISON.md) before either set existed. It lost, the owner withdrew the model
-from the estate, and **its 741 files, its manifest and its registry entry have been deleted.**
+from the estate, and **its 394 files — 392 images plus its manifest and deployment record — have
+been deleted.**
 COMPARISON.md is now the record of what that evaluation measured; §8 there is the verdict.
 
 ```
