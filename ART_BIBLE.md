@@ -14,7 +14,7 @@ than argued.
 **Painterly hides what diffusion cannot hold steady.** A hand-painted world is *supposed* to vary
 from tile to tile and from chair to chair. A flat-vector world is not: two vector chairs that
 disagree by three pixels read as a bug, and there is no seed in this pipeline to make them agree
-(`studio/src/migrations.ts:154-252` has no `seed` column, and grepping `seed` across `studio/src`
+(`studio/src/migrations.ts` has no `seed` column, and grepping `seed` across `studio/src`
 returns nothing). Painterly turns the medium's worst property into the style's best one.
 
 **And the flat brief was rigging the comparison.** Qwen-Image 2512 reads a flat-graphic brief
@@ -39,7 +39,7 @@ medium avoids.
 ## 2. The ground, and the three ground classes
 
 Grounds normalise **numerically** to `#12100f`, as everywhere in this estate
-(`brand/normalise_ground.py:27` — `TARGET = (0x12,0x10,0x0F)`), because neither model will hit an
+(`brand/normalise_ground.py` — `TARGET = (0x12,0x10,0x0F)`), because neither model will hit an
 exact hex and a set whose grounds disagree does not read as one family however dark each of them
 is alone.
 
@@ -91,7 +91,7 @@ object's photographic average. Every entry in `PALETTE` names a hue and its dire
 wheel and nothing else.
 
 **UI chrome wears Forge Worlds' accent `#6d9a49`**, as Emberkin and Aetherholm both do
-(`ui/packages/ui/src/surfaces.ts:455` and `:477`). A title wears its product's colour rather than
+(`ui/packages/ui/src/surfaces.ts` and). A title wears its product's colour rather than
 claiming its own. The 42 flat-vector assets — glyphs, economy icons, chrome — are the only work in
 this repository held to an accent floor; the painterly sets carry a floor of zero and have their
 accent recorded rather than gated.

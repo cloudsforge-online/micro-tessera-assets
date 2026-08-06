@@ -23,7 +23,7 @@ export type AdapterKind =
  * `withdrawn` is not `implemented: false`. An unimplemented backend is one whose wire shape is not
  * known yet; a withdrawn one is a deployment that no longer exists. Cosmos 3 Super failed to come
  * up on A100_80GB and was deleted, and its entry is kept complete rather than removed — the estate
- * has a stated 3D/animation gap FLUX cannot fill (docs/ecosystem/19-new-products.md:97), so a third
+ * has a stated 3D/animation gap FLUX cannot fill (docs/ecosystem/19-new-products.md), so a third
  * model is a question of when. Nothing in this repository counts providers or assumes there are
  * two: the registry is the list, and `live()` is the subset that can be run.
  */

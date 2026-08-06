@@ -18,7 +18,7 @@
  * comparison MEASURED, which is the part that was worth having.
  *
  * **The seam stays.** One live provider is a fact about today, not a shape for the code. The
- * estate has a stated 3D and animation gap FLUX cannot fill (docs/ecosystem/19-new-products.md:97),
+ * estate has a stated 3D and animation gap FLUX cannot fill (docs/ecosystem/19-new-products.md),
  * so a next challenger is a question of when rather than if, and reinstating this interface,
  * `providers.json`'s N-provider registry, `replay.ts`'s prompt record and `verify.py`'s parity and
  * delivered-size checks would be a rewrite rather than an edit. What was deleted with Qwen is only
