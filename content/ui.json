@@ -4,7 +4,7 @@
     "the Kiln's own art. docs/ecosystem/23-tessera.md §2.10 – §2.13.",
     "",
     "UI CHROME WEARS FORGE WORLDS' ACCENT #6d9a49 (doc 23 §1.1), as Emberkin and Aetherholm both",
-    "do (ui/packages/ui/src/surfaces.ts:455 and :477) — a title wears its product's colour rather",
+    "do (ui/packages/ui/src/surfaces.ts and :477) — a title wears its product's colour rather",
     "than claiming its own. The glyphs and icons are therefore the only FLAT VECTOR work in an",
     "otherwise painterly repository, and verify.py holds them to an accent-coverage floor that the",
     "painterly sets carry at zero.",

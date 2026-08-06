@@ -3,7 +3,7 @@
     "The eight ward archetypes, from docs/ecosystem/23-tessera.md §2.4 and §6.1.",
     "",
     "CANONICAL. doc 23 §6 says the trees live as JSON in THIS repository so the engine and the art",
-    "prompts read the same file and cannot drift — the Emberkin pattern (19-new-products.md:86).",
+    "prompts read the same file and cannot drift — the Emberkin pattern (19-new-products.md).",
     "micro-tessera does not exist yet; when it does it reads this file rather than restating it.",
     "That inversion is what micro-aetherholm-assets got wrong in the other direction and had to",
     "record in its README: two content sources is the drift defect this estate keeps paying for.",
