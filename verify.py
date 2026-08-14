@@ -840,11 +840,40 @@ def verify_set(provider, document: dict, wanted: set[str], as_shipped: bool = Fa
                 f"CANDIDATE set — a partial challenger is not a build failure. First few: "
                 f"{', '.join(missing[:5])}"
             )
+    # AND THE SAME ARGUMENT, APPLIED TO THE DERIVATIVES, WHICH IT HAD NOT BEEN.
+    #
+    # The loop below was unconditionally fatal while the loop above it had just been made
+    # conditional, and the two contradicted each other in the one case that matters: 96 of this
+    # repository's 104 derivatives are tiles cut off a terrain plate, so a candidate that has
+    # generated two plates is missing 94 tiles BECAUSE the check above has just declared the
+    # missing plates "not a build failure". Measured on this branch, on a candidate eight assets
+    # old: 100 failures, every one of them a derivative of something nobody claimed was there.
+    # A hundred failures that are all downstream of a state the previous check calls normal is
+    # how a real failure gets missed.
+    #
+    # The fix is NARROWER than gating the loop on `provider.shipped`, and deliberately so. What
+    # is excused is only a derivative whose SOURCE was never generated — `plan["derived"]` names
+    # it in `from`, so this is answerable rather than inferred. A derivative whose source IS on
+    # disk and which was still never built is a FAILURE FOR EVERY SET, candidate included: that
+    # is a run that skipped `--derive-only`, or a project_iso.py that dropped a tile, and neither
+    # is a fact about how much of a challenger somebody chose to generate. For the shipped set
+    # nothing changes at all, because the shipped set has no missing sources.
+    unbuilt: list[str] = []
     for planned in plan["derived"]:
         if wanted and planned["set"] not in wanted:
             continue
-        if planned["key"] not in assets:
-            failures.append(f'{planned["key"]}: planned as a derivative but never built')
+        if planned["key"] in assets:
+            continue
+        source_missing = planned["from"] not in assets and f'{planned["from"]}-source' not in assets
+        if source_missing and not (provider.shipped or as_shipped):
+            unbuilt.append(planned["key"])
+            continue
+        failures.append(f'{planned["key"]}: planned as a derivative but never built')
+    if unbuilt:
+        print(
+            f"note {len(unbuilt)} planned derivative(s) have no source in this CANDIDATE set, so "
+            f"they could not be built. First few: {', '.join(unbuilt[:5])}"
+        )
 
     for asset in document["assets"]:
         if wanted and asset["set"] not in wanted:
