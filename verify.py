@@ -54,6 +54,12 @@ The checks, and where each came from:
      withdrawn Qwen deployment transposed `size` and REPORTED the size it was asked for, so it had
      to be measured off the bytes; kept, generalised, because the property is not about that model.
  10. **Prompt parity** across every set present. The check the whole comparison rests on.
+ 11. **NEW — the native columns.** Where a provider refuses to generate at a size this set
+     declares, the asset is generated larger and Lanczos'd DOWN, and four `native*` columns record
+     what was actually delivered. This re-derives all four from the file they name and refuses a
+     native SMALLER than the declared size — the upscale check. **Integrity, not conformance**, and
+     it is not an edge case here: 229 of a gpt-image-2 set's 288 generations carry those columns,
+     which is the highest proportion anywhere in the estate. See `check_native`.
 
   ** CHECKS 9 AND 10 ARE CROSS-SET, AND THERE IS ONE SET TODAY. ** The owner withdrew Qwen-Image
   2512 and its candidate tree is gone, so both of these now have nothing to compare and return
@@ -66,6 +72,12 @@ The checks, and where each came from:
     python3 verify.py --provider flux-2-pro
     python3 verify.py objects glyphs       # only these sets
     python3 verify.py --self-test          # break each guard on a fixture; no images needed
+    python3 verify.py --provider gpt-image-2 --as-shipped   # would it be green if it SHIPPED
+
+`--as-shipped` is the flag promote.py gates on. It changes nothing except which lists are fatal:
+a candidate is graded by the shipped set's rules, so conformance, completeness and registration
+stop being reported and start failing. A red line under it means the set is SOUND and would not be
+CONFORMANT — a promotion must not be the thing that discovers that.
 """
 
 from __future__ import annotations
@@ -678,6 +690,94 @@ def check_parity(documents: dict[str, dict]) -> list[str]:
     return problems
 
 
+NATIVE_COLUMNS = ("nativePath", "nativeSize", "nativeSha256", "nativeC2pa")
+
+
+def check_native(asset: dict, root: Path) -> list[str]:
+    """The four `native*` columns, re-derived from the file they name. INTEGRITY, never conformance.
+
+    ## What these columns are, and why they need a check of their own
+
+    Some endpoints refuse to generate at a size this set declares. gpt-image-2 has a minimum pixel
+    budget, measured by bisection to sit in (524288, 655360], and TWO HUNDRED AND TWENTY-NINE of
+    this set's 288 generations fall under it: all 96 seed objects, 24 structures and 12 markers at
+    512x512, all 48 avatar plates at 256x512, all 40 glyphs and economy icons at 256x256, the 8
+    kiln sheets at 768x768 and one 1024x512 chrome mark. Each is generated at an exact multiple of
+    the same aspect ratio and
+    Lanczos'd DOWN by `derive.py --resample`, and the as-delivered file is kept at
+    `native/<set>/<slug>-<w>x<h>-asdelivered.png` — outside `assets/`, so the orphan walk below
+    does not see it and so nothing ever ships it by accident.
+
+    That leaves the shipped-looking PNG one step removed from anything the model returned, which is
+    exactly the situation in which "generated at 512x512" quietly becomes an upscale of something
+    smaller. Four columns say what the model actually delivered; without this function they are
+    four strings nobody has ever compared to a file, which is this estate's favourite kind of
+    defect. `verify.py`'s whole claim is that a manifest is TRUE about bytes, and the native
+    columns are part of the manifest. 80% of a gpt-image-2 set carries them here — the highest
+    proportion anywhere in the estate — so this is not an edge-case check in this repository. It is
+    the check that covers most of the set.
+
+    Five things are checked and every one of them is fatal for a candidate as well as for the
+    shipped set, because all five are claims the manifest makes about itself:
+
+      * the columns arrive together or not at all — three of four is a half-written record
+      * the named file exists, and its sha256 and c2pa state are what the row says (c2pa MEASURED,
+        because re-encoding drops the chunk and the downscaled asset is expected to have lost it
+        while the native is expected to have kept it — the pair is the evidence)
+      * the file's real pixel size is `nativeSize`
+      * the native is not SMALLER than the declared size on either axis. That is the upscale check,
+        and it matters more in this repository than in any sibling: §1b of COMPARISON.md calls a
+        sprite in the wrong projection *unusable* rather than merely worse, a downscale cannot move
+        a projection and an upscale invents the edges it is read off.
+      * the two aspect ratios agree to within half a pixel, so the "derived" file really is this
+        file's downscale and not a differently-shaped image that happens to sit beside it.
+    """
+    if not any(column in asset for column in NATIVE_COLUMNS):
+        return []
+    missing = [column for column in NATIVE_COLUMNS if column not in asset]
+    if missing:
+        held = ", ".join(sorted(set(NATIVE_COLUMNS) - set(missing)))
+        return [f"records {held} but not {', '.join(missing)}"]
+
+    problems: list[str] = []
+    native = root / asset["nativePath"]
+    if not native.exists():
+        return [f'nativePath {asset["nativePath"]} is not on disk']
+
+    data = native.read_bytes()
+    if hashlib.sha256(data).hexdigest() != asset["nativeSha256"]:
+        problems.append(f'{asset["nativePath"]}: checksum does not match nativeSha256')
+    carries = C2PA_MARKER in data
+    if carries != asset["nativeC2pa"]:
+        problems.append(
+            f'{asset["nativePath"]}: manifest says nativeC2pa={asset["nativeC2pa"]} and the bytes '
+            f"say {carries}"
+        )
+
+    with Image.open(native) as raw:
+        measured = raw.size
+    stated = tuple(int(n) for n in asset["nativeSize"].split("x"))
+    if measured != stated:
+        problems.append(
+            f'{asset["nativePath"]}: {measured[0]}x{measured[1]} against a recorded nativeSize '
+            f'{asset["nativeSize"]}'
+        )
+
+    declared = tuple(int(n) for n in asset["declaredSize"].split("x"))
+    if measured[0] < declared[0] or measured[1] < declared[1]:
+        problems.append(
+            f'native {measured[0]}x{measured[1]} is smaller than the declared '
+            f'{asset["declaredSize"]} on at least one axis — the shipped file would be an UPSCALE '
+            "of it, and no set here upscales"
+        )
+    elif abs(measured[0] / measured[1] - declared[0] / declared[1]) > 0.5 / max(declared):
+        problems.append(
+            f'native {measured[0]}x{measured[1]} is not the same shape as the declared '
+            f'{asset["declaredSize"]}, so the shipped file is not a downscale of it'
+        )
+    return problems
+
+
 def check_integrity(provider, document: dict) -> list[str]:
     """Things about the manifest as a whole, rather than about any one image."""
     problems: list[str] = []
@@ -696,7 +796,7 @@ def check_integrity(provider, document: dict) -> list[str]:
     return problems
 
 
-def verify_set(provider, document: dict, wanted: set[str]) -> list[str]:
+def verify_set(provider, document: dict, wanted: set[str], as_shipped: bool = False) -> list[str]:
     plan = json.loads(PLAN.read_text())
     ground_target = hex_to_rgb(GROUND)
 
@@ -732,7 +832,7 @@ def verify_set(provider, document: dict, wanted: set[str]) -> list[str]:
         and f'{planned["key"]}-source' not in assets
     ]
     if missing:
-        if provider.shipped:
+        if provider.shipped or as_shipped:
             failures.extend(f"{key}: planned but never generated" for key in missing)
         else:
             print(
@@ -766,6 +866,10 @@ def verify_set(provider, document: dict, wanted: set[str]) -> list[str]:
         data = path.read_bytes()
         if hashlib.sha256(data).hexdigest() != asset["sha256"]:
             problems.append("checksum does not match the manifest")
+
+        # INTEGRITY, always. See check_native's docstring: without it, "generated at 512x512" on
+        # 229 of a candidate's 288 rows is a sentence nobody has ever compared to a file.
+        problems.extend(check_native(asset, provider.root))
 
         # ---- 4. the disclosure must be what the bytes say. micro-brand's 54-entry lesson.
         carries_c2pa = C2PA_MARKER in data
@@ -839,7 +943,7 @@ def verify_set(provider, document: dict, wanted: set[str]) -> list[str]:
                     f'{MAX_HUE_DRIFT:.0f} degrees of {asset["accent"]} (floor {floor * 100:.1f}%)'
                 )
 
-        fatal = problems + (conformance if provider.shipped else [])
+        fatal = problems + (conformance if (provider.shipped or as_shipped) else [])
         mark = "FAIL" if fatal else ("warn" if conformance else "ok  ")
         rows.append(
             f'{mark} {asset["set"]:<10} {asset["slug"]:<26} {asset["declaredSize"]:>9} '
@@ -987,6 +1091,29 @@ def main(argv: list[str]) -> int:
         action="store_true",
         help="break each cross-set guard against a fixture and prove it goes red. No images needed.",
     )
+    # The INTEGRITY / CONFORMANCE split above is right and is not being softened: a manifest that
+    # is untrue about its bytes is broken for every set, and how far a CANDIDATE's art sits from
+    # the art bible is the comparison's first criterion rather than a broken build. Turning CI red
+    # for a challenger would mean the only way to land the evidence is to weaken a check.
+    #
+    # But it leaves a gap with teeth, and it is a gap about the FUTURE rather than about today. A
+    # candidate can pass `--provider <id>` with a page of conformance deviations printed as warn,
+    # be promoted on the strength of that green line, and turn the repository red the instant
+    # `shipped` flips to true — at which point the artwork is already at `assets/` and the honest
+    # fix is to switch back. In micro-brand this is not hypothetical: gpt-image-2 passes its own
+    # verify and fails as-shipped on one asset's accent coverage.
+    #
+    # `--as-shipped` asks the other question: not "is this candidate sound" but "would this set be
+    # green if it were the shipped one". It changes nothing except which lists are fatal — the same
+    # measurements, the same output, the same rows. `promote.py` gates on it, so a promotion cannot
+    # be the thing that discovers the answer.
+    parser.add_argument(
+        "--as-shipped",
+        action="store_true",
+        help="hold a candidate to the SHIPPED set's rules: conformance, completeness and "
+        "registration become fatal. What promote.py gates on, so a promotion cannot discover "
+        "the answer.",
+    )
     args = parser.parse_args(argv)
 
     if args.self_test:
@@ -1001,10 +1128,13 @@ def main(argv: list[str]) -> int:
     documents: dict[str, dict] = {}
 
     for provider in chosen:
-        print(f"===== {provider.id}  ({provider.label})")
+        print(
+            f"===== {provider.id}  ({provider.label})"
+            + ("  — graded AS SHIPPED" if args.as_shipped and not provider.shipped else "")
+        )
         document = json.loads(provider.manifest.read_text())
         documents[provider.id] = document
-        failures = verify_set(provider, document, set(args.sets))
+        failures = verify_set(provider, document, set(args.sets), as_shipped=args.as_shipped)
         failures.extend(check_integrity(provider, document))
         # INTEGRITY, NOT CONFORMANCE, and fatal for every set including a candidate. A
         # misregistered plate is a judgement about art direction; an unkeyed plate is a broken
@@ -1020,8 +1150,9 @@ def main(argv: list[str]) -> int:
             print(f"----- registration: {len(registration)} misregistered overlay(s)")
             for problem in registration:
                 print(f"  -> {problem}")
-        # Conformance, not integrity: fatal for the shipped set, reported for a candidate.
-        if provider.shipped:
+        # Conformance, not integrity: fatal for the shipped set, reported for a candidate — and
+        # fatal for a candidate under --as-shipped, which is exactly the question that flag asks.
+        if provider.shipped or args.as_shipped:
             failures.extend(registration)
         print(f"{len(failures)} failure(s) in {provider.id}\n")
         all_failures.extend(f"{provider.id}: {f}" for f in failures)
@@ -1057,7 +1188,17 @@ def main(argv: list[str]) -> int:
     all_failures.extend(f"transposition: {p}" for p in transposed)
     all_failures.extend(f"parity: {p}" for p in parity)
 
-    print(f"\n{len(all_failures)} failure(s) across {len(chosen)} set(s)")
+    trailer = f"\n{len(all_failures)} failure(s) across {len(chosen)} set(s)"
+    if args.as_shipped:
+        # Said out loud, because a red line under --as-shipped means something quite different
+        # from a red line without it: the set is SOUND and would not be CONFORMANT if it shipped.
+        # Reading it as "the candidate is broken" is how a real answer gets argued with.
+        trailer += (
+            " — graded AS SHIPPED, so conformance, completeness and registration were fatal. A "
+            "failure here means this set would turn the repository red if it were promoted, not "
+            "that its manifest is untrue about its bytes."
+        )
+    print(trailer)
     return 1 if all_failures else 0
 
 

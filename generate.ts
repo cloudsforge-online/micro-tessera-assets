@@ -56,11 +56,12 @@ import { promisify } from 'node:util'
 
 import { ImageBackendError, type Attempt } from '../studio/src/backend.ts'
 import { requestSizeFor, specFor, type AssetKind, type AssetSpec } from '../studio/src/specs.ts'
-import { reportSizing } from '../studio/src/sizing.ts'
+import { reportSizing, type Dimensions } from '../studio/src/sizing.ts'
 import { GENERATED_LICENCE } from '../studio/src/assets.ts'
 
 import {
   backendFor,
+  measureC2pa,
   UnimplementedBackendError,
   type GenerationRequest,
   type ProviderBackend,
@@ -625,6 +626,48 @@ export interface ManifestEntry {
   readonly footprint: string | null
   readonly attempts: readonly Attempt[]
   readonly note?: string
+
+  /* ---- the native columns. Absent on every entry whose endpoint could be asked for the declared
+   * size directly, which is all 288 of the reference set's.
+   *
+   * ## Why they are columns here rather than two hundred and twenty-nine more manifest ENTRIES
+   *
+   * The obvious shape is to record the as-delivered native the way `keyart/hero-source` is
+   * recorded: its own entry, its own key, its own row. It cannot be, and the reason is worth
+   * writing down because it looks like an oversight from every direction except the one it comes
+   * from.
+   *
+   * `verify.py`'s `check_parity` fails any key a candidate holds that the reference does not — "no
+   * set can hold an asset the reference has never generated" — because every dialect is a pure
+   * function of the reference record and an extra key means something generated a prompt of its
+   * own. That check is the strongest guarantee in this repository and it is right. An
+   * `objects/seating-stool-native@1024x1024` row would break it for a reason that has nothing to
+   * do with prompts, and the only ways to keep both would be to special-case the parity check or
+   * to widen it. Neither is acceptable: the whole point of it is that it cannot be talked round.
+   *
+   * So the native is not an asset. It is a PROPERTY of the asset that was cut from it, recorded on
+   * that asset's row, stored outside `assets/` at `native/<set>/<file>` — which is also outside
+   * the reach of `verify.py`'s orphan-PNG walk, which globs only under `assets/`. `verify.py`'s
+   * `check_native` checks these four columns against the bytes they name, so the native is
+   * measured rather than merely mentioned.
+   *
+   * THE WORST RATIO IN THE ESTATE IS HERE. 229 of this set's 288 generations declare a size below
+   * `gpt-image-2`'s measured minimum pixel budget — every one of the 96 seed objects, all 48
+   * avatar plates, all 40 glyphs and icons, the 24 structures, the 12 markers, the 8 kiln sheets
+   * and one chrome mark. Fifty-nine are asked for as they stand: the 32 terrain plates, the 16
+   * backdrops, six splashes, four key art frames and one chrome mark.
+   * If a reader of this manifest wants to know which files are the model's own bytes and which are
+   * Pillow's, `nativePath` being present IS that question, and `c2pa` false beside `nativeC2pa`
+   * true is what a downscale looks like.
+   */
+
+  /** Provider-root-relative, e.g. `native/objects/seating-stool-1024x1024-asdelivered.png`. */
+  readonly nativePath?: string
+  /** What was actually asked for and delivered, before the downscale. */
+  readonly nativeSize?: string
+  readonly nativeSha256?: string
+  /** Measured on the native's bytes. The derivative loses the chunk; the native is where it lives. */
+  readonly nativeC2pa?: boolean
 }
 
 type Manifest = Record<string, ManifestEntry>
@@ -735,6 +778,49 @@ export class TransposedDeliveryError extends Error {
   }
 }
 
+/**
+ * Lanczos-downscale one file to one size, in Pillow, and report what the result actually is.
+ *
+ * ## Why this shells out instead of resampling in TypeScript
+ *
+ * `studio/src/sizing.ts` MEASURES and deliberately does not resample: doing it in pure TypeScript
+ * means a zlib-aware PNG decoder, a filter reconstructor, a resampler and an encoder, and doing it
+ * with `sharp` means a native dependency in a repository that has none. That decision is unchanged
+ * and correct. The pixels are moved by the same Pillow that already cuts the 96 terrain tiles, the
+ * two title cards and the six chrome sizes, invoked through the same `derive.py` — not macOS
+ * `sips`, which design-system.md §7 item 3 names as the reason the estate's post-processing stage
+ * exists on exactly one laptop.
+ *
+ * ## Why this is not "silently upscaling and calling it generated"
+ *
+ * It is the opposite operation. The model generated a LARGER image than the asset declares, because
+ * the endpoint refused the declared size, and this cuts it down — the same direction, and the same
+ * argument, as the two title cards being centre-cropped out of key art that was generated bigger.
+ * No pixel is invented. The as-delivered native is kept beside the set, its checksum and C2PA state
+ * are recorded on the entry, and `verify.py --provider <id>` re-measures both.
+ *
+ * ## And why it matters more here than anywhere else in the estate
+ *
+ * doc 23 §2.1 fixes 2:1 dimetric isometric and the whole title composes out of sprites that have
+ * to agree about it. A downscale is an affine operation on the pixel grid and preserves projection
+ * exactly; an UPSCALE would invent the very edges the projection is judged on. That asymmetry is
+ * the reason `verify.py`'s `check_native` fails a native SMALLER than the size it feeds, rather
+ * than merely noting it.
+ */
+async function resample(source: string, target: string, size: Dimensions): Promise<{
+  sha256: string
+  byteSize: number
+  c2pa: boolean
+  size: string
+}> {
+  const { stdout } = await run(
+    'python3',
+    [join(HERE, 'derive.py'), '--resample', source, target, `${size.width}x${size.height}`],
+    { maxBuffer: 8 * 1024 * 1024 },
+  )
+  return JSON.parse(stdout) as { sha256: string; byteSize: number; c2pa: boolean; size: string }
+}
+
 async function generateOne(
   provider: Provider,
   backend: ProviderBackend,
@@ -767,26 +853,22 @@ async function generateOne(
       const result = await backend.generate(request, AbortSignal.timeout(300_000))
       allAttempts.push(...result.attempts)
 
-      const sizing = reportSizing(
-        result.bytes,
-        { width: requested.width, height: requested.height },
-        'png',
-      )
+      // What the BACKEND asked for, which is what the bytes have to be measured against. Equal to
+      // `requested` for every provider that can be asked for the declared size directly; larger
+      // where an endpoint has a minimum this asset falls under. See `nativeRequest`.
+      const asked = result.nativeRequest ?? requested
+      const sizing = reportSizing(result.bytes, asked, 'png')
       const delivered = sizing.actual ? `${sizing.actual.width}x${sizing.actual.height}` : 'unknown'
 
       // MEASURED, BEFORE THE FILE IS KEPT. A transposed delivery is not a transient fault and
       // must not be written to disk and recorded as if it were the asset.
       if (
         sizing.actual &&
-        requested.width !== requested.height &&
-        sizing.actual.width === requested.height &&
-        sizing.actual.height === requested.width
+        asked.width !== asked.height &&
+        sizing.actual.width === asked.height &&
+        sizing.actual.height === asked.width
       ) {
-        throw new TransposedDeliveryError(
-          planned.key,
-          `${requested.width}x${requested.height}`,
-          delivered,
-        )
+        throw new TransposedDeliveryError(planned.key, `${asked.width}x${asked.height}`, delivered)
       }
 
       const [directory] = planned.key.split('/')
@@ -794,8 +876,56 @@ async function generateOne(
       await mkdir(dir, { recursive: true })
       const fileName = fileNameFor(planned, requested)
       const path = join(dir, fileName)
-      await writeFile(path, result.bytes)
 
+      // ---- the native path: generated larger than declared because the endpoint refused the
+      // declared size, then cut down. Nothing is upscaled and nothing is invented; the native is
+      // kept, because it is the file that still carries the C2PA chunk — the same reason the
+      // as-delivered key art is kept beside the two title cards cut out of it.
+      let native: {
+        nativePath: string
+        nativeSize: string
+        nativeSha256: string
+        nativeC2pa: boolean
+      } | null = null
+      let bytesOnDisk = result.bytes
+
+      if (result.nativeRequest) {
+        const nativeDir = join(provider.root, 'native', directory!)
+        await mkdir(nativeDir, { recursive: true })
+        const nativeName =
+          `${planned.slug}-${result.nativeRequest.width}x${result.nativeRequest.height}` +
+          '-asdelivered.png'
+        const nativeFile = join(nativeDir, nativeName)
+        await writeFile(nativeFile, result.bytes)
+
+        const cut = await resample(nativeFile, path, {
+          width: requested.width,
+          height: requested.height,
+        })
+        bytesOnDisk = await readFile(path)
+        if (cut.size !== `${requested.width}x${requested.height}`) {
+          throw new Error(
+            `${planned.key}: the downscale produced ${cut.size} rather than the requested ` +
+              `${requested.width}x${requested.height}. Pillow reported a size this run did not ` +
+              'ask for, so the file is not the asset and must not be recorded.',
+          )
+        }
+        native = {
+          nativePath: `native/${directory}/${nativeName}`,
+          nativeSize: delivered,
+          nativeSha256: sha256(result.bytes),
+          nativeC2pa: result.c2pa,
+        }
+      } else {
+        await writeFile(path, result.bytes)
+      }
+
+      // The bytes on disk, always — the native delivery where there was no downscale, and the
+      // cut-down file where there was. `nativeSize` is what the model actually returned.
+      const onDisk = reportSizing(bytesOnDisk, requested, 'png')
+      const deliveredOnDisk = onDisk.actual
+        ? `${onDisk.actual.width}x${onDisk.actual.height}`
+        : delivered
       const isSource = fileName.includes('asdelivered')
 
       return {
@@ -811,20 +941,29 @@ async function generateOne(
           ? `${requested.width}x${requested.height}`
           : `${planned.width}x${planned.height}`,
         requestedSize: `${requested.width}x${requested.height}`,
-        deliveredSize: delivered,
-        sizing: sizing.sizing,
+        deliveredSize: deliveredOnDisk,
+        sizing: onDisk.sizing,
         cropped: false,
+        // Null even on the native path, deliberately. `derivedFrom` names another ASSET this file
+        // was cut, projected or composited from, and compare.py counts the entries without one as
+        // this set's generations. A native is not another asset — it is the raw delivery of THIS
+        // one, which is why it has no manifest key of its own — so filling this in would report 59
+        // generations for a set that paid for 288, and would drop 229 assets out of compare.py's
+        // counts as well.
         derivedFrom: null,
         provider: provider.id,
         backend: result.backend,
         model: result.model,
         prompt,
         seed: result.seed,
-        sha256: sha256(result.bytes),
-        byteSize: result.bytes.length,
+        sha256: native ? sha256(bytesOnDisk) : sha256(result.bytes),
+        byteSize: bytesOnDisk.length,
         generatedAt: new Date().toISOString(),
-        // Measured on the bytes, never asserted from the vendor. The standing rule.
-        c2pa: result.c2pa,
+        // Measured on the bytes, never asserted from the vendor. The standing rule — and on the
+        // native path it is measured on the bytes that were WRITTEN, which have been re-encoded and
+        // have lost the C2PA chunk even though the delivery carried one. `nativeC2pa` records that
+        // the delivery did, which is what makes the pair evidence rather than a claim.
+        c2pa: native ? measureC2pa(bytesOnDisk) : result.c2pa,
         retries: previousRetries + transient,
         licence: GENERATED_LICENCE,
         providerCostUnits: result.providerCostUnits,
@@ -834,6 +973,20 @@ async function generateOne(
         deliveredGround: null,
         footprint: planned.footprint ?? null,
         attempts: allAttempts,
+        ...(native ?? {}),
+        ...(native
+          ? {
+              note:
+                `Generated at ${native.nativeSize} and Lanczos-downscaled to ` +
+                `${requested.width}x${requested.height}. This endpoint refuses the declared size ` +
+                "— it is below the deployment's minimum pixel budget — so the nearest exact " +
+                'multiple of the SAME aspect ratio was asked for and cut DOWN. No pixel was ' +
+                'invented and nothing was upscaled. The as-delivered native is kept at ' +
+                `${native.nativePath}, outside assets/, because it is the file that still carries ` +
+                'the C2PA chunk; re-encoding drops it and the invisible pixel watermark is ' +
+                'unaffected.',
+            }
+          : {}),
       }
     } catch (err) {
       lastError = err

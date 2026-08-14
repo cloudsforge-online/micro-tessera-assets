@@ -192,9 +192,53 @@ test('the registry describes the models rather than counting them', () => {
   assert.ok(CANDIDATES.length >= 1)
   assert.ok(live().length >= 1)
   for (const candidate of CANDIDATES) {
-    assert.equal(candidate.billing.unit, 'deployment hour')
+    assert.equal(candidate.shipped, false)
     assert.equal(candidate.billing.hourlyRate, null, 'a rate was filled in; check it was measured')
   }
+
+  // ══════════════════════════════════════════════════════════════════════════════════════════════
+  // BILLING IS ASSERTED AS A CONSISTENT SHAPE, NOT AS A LIST OF KNOWN UNIT STRINGS.
+  //
+  // This used to read `assert.equal(candidate.billing.unit, 'deployment hour')` for every
+  // candidate, on the reasoning that the unit string is not decoration — compare.py refuses to add
+  // costs across units and the honesty of COMPARISON.md §6 depends on it being right. The
+  // reasoning was correct and the assertion was the wrong shape for it: it pinned the two units
+  // that happened to exist, so a third one could only ever arrive by editing a test, and the
+  // obvious edit is to widen it into a set of allowed strings that then has to be widened again.
+  //
+  // gpt-image-2 is the third unit — output image tokens, per image, and neither of the other two.
+  // What actually has to hold is not WHICH unit it is but that the unit and the BASIS agree, and
+  // that the basis is one compare.py knows how to read: `per image generated` takes the per-image
+  // path and needs a response field named as its source, `per hour…` takes the deployment-hour
+  // path and needs a DEPLOYMENT.json and a SKU. compare.py branches on `basis` for exactly this
+  // reason, and it did NOT until this run: it branched on `unit`, which sent a token-billed
+  // serverless endpoint down the deployment-hour arm and asked it for a file it will never have.
+  // ══════════════════════════════════════════════════════════════════════════════════════════════
+  for (const provider of PROVIDERS) {
+    const { unit, basis, source, sku } = provider.billing
+    assert.ok(unit.length > 0, `${provider.id}: no billing unit`)
+    assert.ok(
+      basis.startsWith('per image generated') || basis.startsWith('per hour'),
+      `${provider.id}: billing basis "${basis}" is one compare.py cannot dispatch on`,
+    )
+    if (basis.startsWith('per image generated')) {
+      // A per-image provider has to name the response field its figure comes off, because that
+      // figure lands in providerCostUnits on every row and there is no other record of where it
+      // came from months later.
+      assert.ok(
+        source.includes('providerCostUnits'),
+        `${provider.id}: a per-image basis must say which response field providerCostUnits holds`,
+      )
+      assert.equal(sku, null, `${provider.id}: a per-image provider has no hardware SKU`)
+    } else {
+      assert.ok(
+        source.includes('DEPLOYMENT.json'),
+        `${provider.id}: an hourly basis must name the operator's deployment record as its source`,
+      )
+      assert.ok(sku !== null, `${provider.id}: an hourly provider bills for a SKU; name it`)
+    }
+  }
+
   const cosmos = providerById('cosmos-3-super')
   assert.equal(cosmos.status, 'withdrawn')
   assert.throws(() => backendFor(cosmos, {}), ProviderWithdrawnError)

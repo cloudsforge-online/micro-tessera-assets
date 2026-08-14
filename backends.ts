@@ -12,20 +12,26 @@
  * that must NOT vary stays outside it.
  *
  * **N, not three, and not one.** The comparison was briefed as three-way, ran two-way because
- * Cosmos 3 Super failed to come up on A100_80GB and was deleted, and is one-way today because the
- * owner has withdrawn Qwen-Image 2512 from the estate: FLUX 2 Pro is the shipped set and the
- * challenger's images, manifest and registry entry are gone. COMPARISON.md keeps what that
- * comparison MEASURED, which is the part that was worth having.
+ * Cosmos 3 Super failed to come up on A100_80GB and was deleted, went one-way when the owner
+ * withdrew Qwen-Image 2512, and is two-way again with `gpt-image-2` on trial. Four transitions,
+ * and not one of them needed this interface changed. COMPARISON.md keeps what each of those
+ * evaluations MEASURED, which is the part of them that was worth having.
  *
- * **The seam stays.** One live provider is a fact about today, not a shape for the code. The
- * estate has a stated 3D and animation gap FLUX cannot fill (docs/ecosystem/19-new-products.md),
- * so a next challenger is a question of when rather than if, and reinstating this interface,
- * `providers.json`'s N-provider registry, `replay.ts`'s prompt record and `verify.py`'s parity and
- * delivered-size checks would be a rewrite rather than an edit. What was deleted with Qwen is only
- * what could not outlive it: its envelope, and the transposed-`size` workaround for its bug.
- * Nothing in this file, in providers.json, in the manifest schema or in compare.py counts
- * providers. A withdrawn one keeps its entry, because the wire facts in it were measured and are
- * cheaper to re-read than to re-establish.
+ * **AND THAT IS THE ARGUMENT FOR THE SEAM, SETTLED BY EVENTS RATHER THAN ASSERTED.** When the last
+ * challenger went there was one live provider, and the case for keeping N-provider machinery was a
+ * prediction: the estate has a stated 3D and animation gap FLUX cannot fill
+ * (docs/ecosystem/19-new-products.md), so a next challenger was a question of when. The prediction
+ * held. Adding `gpt-image-2` cost one registry entry, one member on `AdapterKind`, one backend
+ * below and a native-size path in `generate.ts` — against the rewrite it would have been if the
+ * seam had been collapsed back to a single hardcoded model. Nothing in this file, in
+ * providers.json, in the manifest schema or in compare.py counts providers, and a withdrawn one
+ * keeps its entry because the wire facts in it were measured and are cheaper to re-read than to
+ * re-establish.
+ *
+ * What was deleted with Qwen was only what could not outlive it: its `openai-images` envelope, and
+ * the transposed-`size` workaround for its bug. The envelope is back below as a NEW
+ * implementation of the same vendor shape, probed from scratch — the workaround is not, and none
+ * of the eleven probes behind `openaiImagesBackend` found a reason for one.
  *
  * ## What must not vary, and how this file guarantees it
  *
@@ -66,6 +72,7 @@ import {
   type ImageRequest,
 } from '../studio/src/backend.ts'
 import type { AssetSpec } from '../studio/src/specs.ts'
+import type { Dimensions } from '../studio/src/sizing.ts'
 import type { AttemptOutcome } from '../studio/src/backend.ts'
 
 import { ProviderWithdrawnError, type Provider } from './providers.ts'
@@ -91,6 +98,22 @@ export interface GenerationResult {
   /** What went in the manifest's `backend` column. The adapter, not the vendor's marketing name. */
   readonly backend: string
   readonly model: string | null
+  /**
+   * What this backend ACTUALLY asked the endpoint for, when that is not what the request named.
+   *
+   * Null for the reference provider and for every asset a provider can be asked for directly, and
+   * that null is the normal case. It is non-null only where an endpoint refuses the size the asset
+   * declares and the backend had to ask for a larger one — `gpt-image-2` has a minimum pixel budget
+   * that the 1024x384 wordmark and the 512x512 favicon both fall under.
+   *
+   * It exists because the caller cannot otherwise check the one thing worth checking. `generate.ts`
+   * measures the delivered bytes against what was asked for and refuses a transpose; measuring
+   * 1536x576 bytes against a 1024x384 request would make that check fire on every wordmark in the
+   * set and be switched off, which is how a real rotation gets through. So the backend states what
+   * it asked for and the measurement is made against THAT — the check stays live, and the fact that
+   * a downscale is owed becomes a piece of data on the result rather than an inference from a size.
+   */
+  readonly nativeRequest: Dimensions | null
   /**
    * MEASURED on the bytes returned, never asserted from the vendor. This estate's standing rule,
    * and the one that already cost it 54 entries claiming a C2PA box the files had not carried
@@ -455,6 +478,376 @@ export function managedComputeBackend(
 }
 
 
+/* ------------------------------------------------------------------ openai images */
+
+/**
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ * **THE MEASURED CONTRACT for `/openai/v1/images/generations` on an Azure AI Foundry AIServices
+ * resource.** Eleven probe requests, serialised forty seconds apart, before one asset was
+ * generated. Nothing below was read off a model card, and three of the eleven contradict what the
+ * documentation for this route says.
+ *
+ *     POST {AZURE_IMAGES_ENDPOINT}
+ *     api-key: <AZURE_IMAGES_KEY>
+ *     content-type: application/json
+ *     {"model":"gpt-image-2","prompt":"…","size":"1024x1024","n":1,"quality":"high"}
+ *
+ * An adapter of this shape existed here once and was deleted with the Qwen challenger, together
+ * with that endpoint's transposed-`size` workaround. This is a new implementation of the same
+ * vendor envelope: the shape is shared, the compensations are not, and none of Qwen's are here.
+ *
+ * 1. **`api-key`, not `Authorization: Bearer`** — the same header the other two adapters use, on a
+ *    third host with a third key. Given as measured; not re-probed, because a wrong guess here is a
+ *    401 rather than a silent difference.
+ * 2. **`model` is REQUIRED in the body.** The route is model-agnostic, so this is the reference
+ *    provider's trap arrived at from the opposite direction: there the model is in the path AND
+ *    required in the body; here it is in neither the path nor optional.
+ * 3. **The response carries `b64_json` ONLY.** There is no `url` field on an item, so there is no
+ *    download step, no expiring link and no second request to fail. Decode and write.
+ * 4. **PNG is the default.** FLUX returns JPEG unless `output_format:"png"` is sent; this does not,
+ *    so nothing is sent. A JPEG brand mark has visible ringing on flat vector edges, so this was
+ *    checked rather than assumed — every probe came back with a PNG signature.
+ * 5. **`background:"transparent"` is REFUSED**: 400 `image_generation_user_error`, "Transparent
+ *    background is not supported for this model." Irrelevant to this set, every asset of which is
+ *    specified on a solid #12100f ground, and recorded so nobody spends an hour on it later.
+ * 6. **`seed` is REFUSED**: 400 `unknown_parameter`. So `seed` is null on every entry in this set,
+ *    exactly as it is on every FLUX entry and for the same reason — nothing true can be recorded.
+ *    A disagreement between two runs of this model is anecdotal rather than reproducible, and that
+ *    is a real cost of this provider rather than a missing feature of this file.
+ * 7. **C2PA is present on every delivered PNG.** Measured with `measureC2pa` on the bytes; the fact
+ *    is written here because it was measured, and it is never read back out of here.
+ * 8. **THE SIZE CONTRACT, which is the fact that shaped the whole run.** Two rules, one of them
+ *    undocumented and bisected:
+ *      a. Both dimensions must be divisible by 16. The same granularity FLUX floors to, so
+ *         `requestSizeFor`'s existing round-up is correct here unchanged and 1200x630 is a 400.
+ *      b. There is a MINIMUM PIXEL BUDGET. 1024x384 (393,216 px), 512x512 (262,144 px) and
+ *         1024x512 (524,288 px) are all "below the current minimum pixel budget"; 1024x640
+ *         (655,360 px) is accepted. So the threshold is somewhere in (524,288, 655,360] and no
+ *         document on this host names it. `MIN_PIXEL_BUDGET` below is the measured ACCEPTANCE
+ *         rather than the lower bound, because a guessed threshold that is one pixel wrong costs
+ *         a 400 per asset for the length of a run.
+ *    Above the budget, arbitrary sizes are honoured EXACTLY — 1200x640, 1280x640 and 1536x576 all
+ *    came back at precisely those dimensions. This deployment is not limited to the three sizes the
+ *    OpenAI images API documents, which is the single most useful thing the probes established:
+ *    the reference set's request sizes can mostly be replayed unchanged.
+ * 9. **429 IS THE NORMAL STATE, not an incident.** AIServices S0 in Sweden Central is a shared
+ *    quota. Two back-to-back requests returned 429 `RateLimitReached` with "Please retry after 32
+ *    seconds" in the body. `concurrency` is 1 in providers.json and that is not caution: every
+ *    parallel request that 429s still costs its own retry-after, so fanning out makes the run
+ *    slower. A full set is measured in hours and that is the expected shape of it.
+ * 10. **`quality` defaults to `"low"`** — 91 output tokens at 1280x640. `"high"` costs 7,024 at
+ *    1024x1024 and takes ~45 s instead of ~11 s. This set is generated at `"high"`: FLUX 2 Pro's
+ *    serverless deployment has no quality tier, so running the challenger at its cheap default
+ *    would be scoring it against a handicap FLUX never had to accept. The tier is in `bodyFor`, so
+ *    parity.test.ts asserts it rather than trusting this paragraph.
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ */
+
+export interface OpenAiImagesConfig {
+  /** The full generations URL, from `AZURE_IMAGES_ENDPOINT`. Never logged, never in an error. */
+  readonly url: string
+  readonly apiKey: string
+  readonly model: string
+}
+
+/** Both dimensions must be divisible by this or the request is a 400. Measured on 1200x630. */
+export const OPENAI_IMAGES_GRID = 16
+
+/**
+ * The smallest pixel count measured to be ACCEPTED, not the smallest thought to be.
+ *
+ * The real threshold is somewhere in (524,288, 655,360] — 1024x512 is refused and 1024x640 is
+ * accepted — and it is documented nowhere on this host. Using the accepted end means the worst case
+ * is generating an asset slightly larger than it strictly had to be, which costs tokens. Using the
+ * refused end, or a number interpolated between them, means a 400 on every asset of a given kind
+ * for the length of a run, and 768x768 (589,824 px) sits squarely in the unmeasured gap.
+ */
+export const MIN_PIXEL_BUDGET = 655_360
+
+/** The quality tier every asset in this set is generated at. See fact 10; asserted by the tests. */
+export const OPENAI_IMAGES_QUALITY = 'high'
+
+/**
+ * The size to actually ask for, so that a downscale to the declared size is a clean ratio.
+ *
+ * Returns null when the requested size can be asked for as it stands, which is the normal case and
+ * the one that costs nothing. Otherwise it returns the smallest scale of the SAME ASPECT RATIO that
+ * clears the pixel budget and lands both dimensions on the 16-grid.
+ *
+ * **Scaled, never padded and never cropped to a different shape.** A 1024x384 wordmark asked for at
+ * 1024x640 would clear the budget with one fewer generation of thought and would compose the mark
+ * for a frame two-thirds taller than the one it ships in; the model draws for the canvas it is
+ * given. So the aspect ratio is preserved exactly and the factors are searched in order. Every
+ * mapping this estate's four asset sets actually hit, all of them measured against the deployment
+ * rather than derived from a model card:
+ *
+ *     1024x384  →  x1.5  →  1536x576   (884,736 px, both /16, exactly 8:3)
+ *     1024x512  →  x1.5  →  1536x768   (1,179,648 px, both /16, exactly 2:1)
+ *      768x768  →  x1.5  →  1152x1152  (1,327,104 px, both /16, exactly 1:1)
+ *      512x512  →  x2    →  1024x1024  (1,048,576 px, both /16, exactly 1:1)
+ *      256x512  →  x2.5  →   640x1280  (819,200 px, both /16, exactly 1:2)
+ *      256x256  →  x3.5  →   896x896   (802,816 px, both /16, exactly 1:1)
+ *
+ * The 768x768 row is the one worth pausing on: 589,824 px sits INSIDE the unmeasured gap, so it is
+ * treated as refused and scaled. That is the conservative direction on purpose — see
+ * MIN_PIXEL_BUDGET — and it costs tokens where guessing the other way would cost a whole run.
+ *
+ * Halves are in the factor list before whole numbers because 1.5 is what makes the wordmark work
+ * and produces an integer on both axes for every size this estate declares; a factor that did not
+ * would be skipped by the 16-grid test rather than silently rounded, because rounding here is how
+ * an aspect ratio drifts by a pixel and a downscale stops being a clean ratio.
+ */
+export function nativeRequestFor(width: number, height: number): Dimensions | null {
+  if (width * height >= MIN_PIXEL_BUDGET) return null
+  for (const factor of [1.5, 2, 2.5, 3, 3.5, 4, 5, 6]) {
+    const scaledWidth = width * factor
+    const scaledHeight = height * factor
+    if (!Number.isInteger(scaledWidth) || !Number.isInteger(scaledHeight)) continue
+    if (scaledWidth % OPENAI_IMAGES_GRID !== 0 || scaledHeight % OPENAI_IMAGES_GRID !== 0) continue
+    if (scaledWidth * scaledHeight < MIN_PIXEL_BUDGET) continue
+    return { width: scaledWidth, height: scaledHeight }
+  }
+  throw new Error(
+    `no native request size exists for ${width}x${height}: no scale of that exact aspect ratio ` +
+      `clears the ${MIN_PIXEL_BUDGET}px minimum with both dimensions on the ` +
+      `${OPENAI_IMAGES_GRID}-pixel grid. Generating it at a different aspect ratio and cropping ` +
+      'would compose the artwork for a frame it does not ship in, which is worse than not ' +
+      'generating it; add a factor above only if it is an exact integer on both axes.',
+  )
+}
+
+/**
+ * How long to wait after a 429, read out of the response rather than guessed.
+ *
+ * Both sources are consulted because neither is reliable alone: the `Retry-After` header is the
+ * standard and this endpoint does not always send it, and the body's "Please retry after 32
+ * seconds" is what it does send. The larger of the two is taken, plus a second of slack, because
+ * retrying one second early costs a whole further retry-after.
+ *
+ * `null` means the response was not a 429 or said nothing useful, and the caller falls back to its
+ * own backoff rather than to a number invented here.
+ */
+export function retryAfterSeconds(headers: Headers, body: string): number | null {
+  const header = Number(headers.get('retry-after'))
+  const fromHeader = Number.isFinite(header) && header > 0 ? header : 0
+  const match = /retry after (\d+(?:\.\d+)?)\s*second/i.exec(body)
+  const fromBody = match?.[1] ? Number(match[1]) : 0
+  const seconds = Math.max(fromHeader, fromBody)
+  return seconds > 0 ? Math.ceil(seconds) + 1 : null
+}
+
+/**
+ * The OpenAI images envelope, for `gpt-image-2` on Azure AI Foundry.
+ *
+ * ## Two things this function is careful about, both of which have cost this estate something
+ *
+ * **It never lets a credential reach a string.** The URL it posts to is itself sensitive — it names
+ * the resource — and Node's `fetch` puts the whole request URL into the message of any transport
+ * exception it throws. That is precisely how bitcoind's rpcauth leaked here once, and no redaction
+ * rule catches it reliably because a URL is not token-shaped. So the catch below reads the
+ * exception's CLASS NAME and its `cause.code`, and never its message; response bodies go through
+ * `redact` before they are stored on an attempt; and nothing prints `config`.
+ *
+ * **It refuses to invent a per-image figure it was not given.** `providerCostUnits` carries
+ * `usage.output_tokens`, which is what this provider actually meters, and `providerOutputMegapixels`
+ * is null because this provider reports no megapixel figure — the delivered area is knowable from
+ * the bytes and writing it into a column named for the PROVIDER's accounting would turn a
+ * measurement of ours into a claim about theirs. COMPARISON.md §6 is the reason that distinction is
+ * worth a null.
+ */
+export function openaiImagesBackend(
+  provider: Provider,
+  config: OpenAiImagesConfig | null = null,
+  deps: {
+    readonly fetch?: typeof globalThis.fetch
+    readonly log?: (m: string) => void
+    readonly sleep?: (ms: number) => Promise<void>
+  } = {},
+): ProviderBackend {
+  const fetchImpl = deps.fetch ?? globalThis.fetch
+  const log = deps.log ?? ((message: string) => process.stdout.write(`${message}\n`))
+  const sleep = deps.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)))
+
+  /** How many 429s one asset absorbs before it is reported as a failure rather than a wait. */
+  const RATE_LIMIT_BUDGET = 8
+  /** Used only when the response said nothing useful about when to come back. */
+  const BLIND_BACKOFF_MS = 35_000
+
+  const sizeFor = (request: GenerationRequest): Dimensions =>
+    nativeRequestFor(request.requestWidth, request.requestHeight) ?? {
+      width: request.requestWidth,
+      height: request.requestHeight,
+    }
+
+  const bodyFor = (request: GenerationRequest): Record<string, unknown> => {
+    const size = sizeFor(request)
+    return {
+      model: config?.model ?? 'gpt-image-2',
+      // Verbatim. The whole comparison is this string being identical to what FLUX was sent.
+      prompt: request.prompt,
+      size: `${size.width}x${size.height}`,
+      n: 1,
+      quality: OPENAI_IMAGES_QUALITY,
+    }
+  }
+
+  return {
+    provider,
+    bodyFor,
+
+    async generate(request, signal) {
+      if (!config) {
+        // Names, never values. Both are read from studio/.env.local, which sources them from
+        // ~/.config/cloudsforge/azure-images.env.
+        throw new Error(
+          `${provider.id} has no endpoint configured; set ${provider.env['endpoint']} and ` +
+            `${provider.env['apiKey']} in studio/.env.local`,
+        )
+      }
+
+      const native = nativeRequestFor(request.requestWidth, request.requestHeight)
+      const size = native ?? { width: request.requestWidth, height: request.requestHeight }
+      const body = bodyFor(request)
+      const attempts: Attempt[] = []
+      let rateLimited = 0
+
+      for (;;) {
+        const startedAt = Date.now()
+        let response: Response
+        try {
+          response = await fetchImpl(config.url, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json', 'api-key': config.apiKey },
+            body: JSON.stringify(body),
+            signal,
+          })
+        } catch (err) {
+          // NEVER the message and never the object. `fetch` embeds the full request URL in it.
+          const kind = err instanceof Error ? err.name : 'unknown'
+          const code = (err as { cause?: { code?: string } } | null)?.cause?.code ?? '-'
+          attempts.push({
+            backend: 'flux',
+            model: config.model,
+            outcome: 'server_error',
+            status: 0,
+            detail: `transport ${kind} (${code})`,
+            durationMs: Date.now() - startedAt,
+          })
+          throw new Error(`${provider.id}: transport failure ${kind} (${code})`)
+        }
+
+        // ══════════════════════════════════════════════════════════════════════════════════════
+        // IN FULL, AND NOT TRUNCATED, BECAUSE THIS IS THE STRING THAT GETS PARSED.
+        //
+        // It read `.slice(0, 4_000)` here for exactly one pilot run, and that run threw away ten
+        // generated images. A success envelope from this endpoint is around 205,000 characters —
+        // it is one 154KB PNG as base64 — so `JSON.parse` was handed a string cut off in the
+        // middle of `b64_json` and threw `Unterminated string in JSON at position 4000` on every
+        // asset, AFTER the endpoint had generated the image and billed for it. Three retries
+        // each, two assets, seventeen minutes, nothing on disk and nothing to show for it.
+        //
+        // The truncation was not a careless line: an attempt's `detail` is stored in the manifest
+        // and an upstream error body can be enormous. It was applied at the wrong BOUNDARY. The
+        // cap belongs where the string is reported, and `redact` already caps at 500 characters
+        // and is called at every one of those points, so the cap is there and only there.
+        //
+        // The adapter this one replaces got it right by accident of structure: it read `.text()`
+        // only inside `if (!response.ok)` and decoded the success path with `response.json()`.
+        // One read serving both paths is better — it cannot consume the body twice — but only if
+        // the read is honest about what it is for.
+        // ══════════════════════════════════════════════════════════════════════════════════════
+        const text = await response.text().catch(() => '')
+
+        if (response.status === 429) {
+          rateLimited += 1
+          const seconds = retryAfterSeconds(response.headers, text)
+          const waitMs = seconds !== null ? seconds * 1_000 : BLIND_BACKOFF_MS * rateLimited
+          // Recorded as an attempt: "how many 429s did this set absorb" is a real property of this
+          // provider and one of the things COMPARISON.md has to be able to answer honestly.
+          attempts.push({
+            // studio's BackendName union has no name for a candidate backend, the same reason the
+            // adapter above gives. The MANIFEST column is not affected: `GenerationResult.backend`
+            // is a plain string and this backend returns 'openai-images' there.
+            backend: 'flux',
+            model: config.model,
+            outcome: 'rate_limited',
+            status: 429,
+            detail: redact(text),
+            durationMs: Date.now() - startedAt,
+          })
+          if (rateLimited > RATE_LIMIT_BUDGET) {
+            throw new Error(
+              `${provider.id}: ${rateLimited} consecutive 429s on one asset. That is past the ` +
+                'per-asset budget, so it is being treated as a quota that is not coming back ' +
+                'rather than as a wait. Nothing is wrong with the request; the S0 quota is spent.',
+            )
+          }
+          log(
+            `    429 (${rateLimited}/${RATE_LIMIT_BUDGET}) — waiting ${Math.round(waitMs / 1000)}s` +
+              `${seconds === null ? ', which the response did not specify' : ''}`,
+          )
+          await sleep(waitMs)
+          continue
+        }
+
+        attempts.push({
+          backend: 'flux', // as above: studio's union has no name for this envelope.
+          model: config.model,
+          outcome: response.ok ? 'ok' : response.status >= 500 ? 'server_error' : 'bad_request',
+          status: response.status,
+          // A successful body is a quarter of a megabyte of base64 and `redact` would store a
+          // shredded fragment of it on every row. The SIZE of the envelope is the only part worth
+          // keeping — it is how the truncation defect above would have been spotted in one glance
+          // at the manifest — so that is what is recorded, and the failure path still keeps the
+          // redacted body, which is where the wire facts in this header were all learned.
+          detail: response.ok ? `ok, ${text.length} character envelope` : redact(text),
+          durationMs: Date.now() - startedAt,
+        })
+
+        if (!response.ok) {
+          // The body is redacted and the URL is never in it. A 400 here is a wire fact worth
+          // reading — every size rule in the header above was learned from one.
+          throw new Error(`${provider.id}: HTTP ${response.status} — ${redact(text)}`)
+        }
+
+        const payload = JSON.parse(text) as {
+          data?: { b64_json?: string }[]
+          usage?: { output_tokens?: number }
+        }
+        const b64 = payload.data?.[0]?.b64_json
+        if (!b64) {
+          // Measured fact 3: there is no `url` fallback to try. If b64_json is absent the response
+          // shape has changed, and guessing at a second field would write a zero-byte PNG.
+          throw new Error(
+            `${provider.id}: the response carries no data[0].b64_json. This endpoint returns ` +
+              'base64 only — there is no url field to fall back to — so the response shape has ' +
+              'changed and the decode path needs re-establishing before another asset is paid for.',
+          )
+        }
+        const bytes = Buffer.from(b64, 'base64')
+
+        return {
+          bytes,
+          backend: 'openai-images',
+          model: config.model,
+          c2pa: measureC2pa(bytes),
+          // What this provider actually meters. Not comparable with FLUX's image units and never
+          // added to them; compare.py branches on billing.basis, not on the unit string.
+          providerCostUnits: payload.usage?.output_tokens ?? null,
+          // Null on purpose: this provider reports no megapixel figure. The delivered area is
+          // knowable from the bytes, and putting our measurement in a column named for theirs
+          // would turn it into a claim they did not make.
+          providerOutputMegapixels: null,
+          // Measured fact 6: `seed` is an unknown_parameter here, so there is no seed to record.
+          seed: null,
+          nativeRequest: native,
+          attempts,
+        }
+      }
+    },
+  }
+}
+
 /* ------------------------------------------------------------------ the reference backend */
 
 /**
@@ -500,6 +893,9 @@ export function referenceBackend(
         providerOutputMegapixels: result.providerMeta?.outputMegapixels ?? null,
         // FLUX 2 Pro accepts no seed parameter, so nothing true can be recorded.
         seed: null,
+        // The reference asks for exactly what it was told to ask for. Every declared size in this
+        // set clears whatever minimum this endpoint has, so there is never a native to downscale.
+        nativeRequest: null,
         attempts: result.attempts,
       }
     },
@@ -527,6 +923,19 @@ export function backendFor(provider: Provider, env: NodeJS.ProcessEnv = process.
         ? { baseUrl: endpoint, apiKey, deployment: provider.deployment, route: provider.route }
         : null
     return managedComputeBackend(provider, config)
+  }
+
+  if (provider.adapter === 'openai-images') {
+    // Same rule as Managed Compute: a missing credential yields a backend with no config rather
+    // than an exception, so the seam stays constructible in a test that never opens a socket. It
+    // refuses at generate time, with the variable NAMES and nothing else.
+    //
+    // `endpoint` here is the FULL generations URL rather than a base to append a path to, because
+    // that is the shape the credential file holds and re-deriving a route from a host is how the
+    // reference provider lost an hour to a 404 on a near-miss path.
+    const config: OpenAiImagesConfig | null =
+      endpoint && apiKey ? { url: endpoint, apiKey, model: 'gpt-image-2' } : null
+    return openaiImagesBackend(provider, config)
   }
 
   if (!endpoint || !apiKey) {
