@@ -16,6 +16,17 @@ export type AdapterKind =
   | 'foundry-serverless'
   /** `/managed-deployments/<name>/v1/chat/completions`. Real, on another host; see backends.ts. */
   | 'foundry-managed-compute'
+  /**
+   * `/openai/v1/images/generations` on an Azure AI Foundry AIServices resource — the OpenAI images
+   * envelope, `api-key` auth, `b64_json` in the response and no `url` field.
+   *
+   * This member existed once before and was deleted with the Qwen challenger, along with that
+   * endpoint's transposed-`size` workaround. It is back because a second model is on trial again,
+   * and it is a DIFFERENT implementation of the same shape: the envelope is the vendor's, the bugs
+   * being compensated for are not. See `openaiImagesBackend` in backends.ts for the measured
+   * contract, all of which was established by probing rather than read off a model card.
+   */
+  | 'openai-images'
 
 /**
  * Whether a provider can be run against at all.

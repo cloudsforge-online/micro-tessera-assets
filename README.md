@@ -498,6 +498,104 @@ badge at the top of this file reports a real result rather than a stalled one.
 
 ---
 
+## 10. Two sets on disk, and how to switch between them
+
+There is more than one set of this artwork. `providers.json` is the registry: one entry per model,
+one of them named by the top-level `reference` field, and that one is the **shipped** set whose
+files live at `assets/`. A challenger lives at `candidates/<id>/` in exactly the same shape —
+`candidates/gpt-image-2/assets/chrome/mark-1024x1024.png` against
+`assets/chrome/mark-1024x1024.png` — because **every `path` in every manifest is relative to its own
+set's root and is the identical string in all of them.** That one property is what makes the switch
+a move rather than a rewrite, and it is why nothing below edits a manifest.
+
+```
+python3 promote.py --list                    # which set is shipped, which are on trial
+python3 materialise.py --list                # and how complete each one is
+```
+
+### Looking at both, without switching anything
+
+```
+python3 materialise.py --provider flux-2-pro  --into /tmp/flux
+python3 materialise.py --provider gpt-image-2 --into /tmp/gpt
+python3 sheet.py --provider gpt-image-2       # contact sheets into review/
+python3 sheet.py --provider gpt-image-2 --field
+python3 compare.py                            # the two sets, measured side by side
+```
+
+`materialise.py` writes a `SET.json` receipt into the destination naming the model, so a directory
+of PNGs can always answer "whose artwork is this?". [COMPARISON.md](COMPARISON.md) is the written
+form of the same comparison.
+
+### Switching
+
+```
+python3 promote.py --provider gpt-image-2 --dry-run   # what would move; moves nothing
+python3 promote.py --provider gpt-image-2             # the switch
+```
+
+The winner's `assets/`, `MANIFEST.json` and `native/` move to the repository root and the OUTGOING
+set moves to `candidates/<its id>/` **first**, so the previous reference is demoted, not deleted —
+its bytes, its manifest and its provenance all survive, which is what keeps COMPARISON.md's numbers
+pointing at something real. `providers.json` is then edited in exactly three places: `reference`,
+and the two entries' `root` and `shipped`.
+
+Before anything moves, the candidate must be **complete** — every one of the 392 keys the reference
+defines, resolved through `materialise.py`. 288 of those are generated and 104 are derived, and the
+derived are not a garnish here: 96 of them are the isometric tiles `project_iso.py` cuts off the 32
+terrain plates. A set that was generated but never passed through `generate.ts --derive-only`
+stands at 288 and stops here, by name.
+
+It must also pass `verify.py --provider <id> --as-shipped`, which holds a candidate to the
+*shipped* rules rather than the on-trial ones. This repository has **three** ground classes where
+its siblings have two, so there are three ways to fail that gate: a `flat` asset's four corners
+must be exactly `#12100f`, a `plate` must be full-bleed above a 0.25 floor, a `scene` edge must sit
+under a 0.12 luma ceiling. No endpoint delivers the first; the shipped set only passes because
+`normalise_ground.py --provider <id>` was run over it. A candidate that skipped that step passes
+its own verify and would turn the repository red one second after the move, and the gate is there
+so that it cannot.
+
+What that gate does *not* have to carry is the keying. `check_keyed` (check 8a) is **integrity**,
+so a candidate whose 48 avatar plates never went through `cutout.py --provider <id>` is already red
+under a plain `verify.py --provider <id>` and never reaches `--as-shipped`. An unkeyed overlay
+composites as an opaque rectangle over the base figure: that is a broken file, not a finding about
+a model, and the two are graded differently on purpose.
+
+After the move and before the registry is written, every checksum in **both** manifests is
+re-derived from the bytes at their new locations, and every `nativePath` is checked to still be on
+disk; if one disagrees the move is rolled back file by file and `providers.json` is never touched.
+The native check earns its place here more than anywhere else in the estate: **229 of a
+gpt-image-2 set's 288 generations in this repository** are Lanczos'd down from a larger delivery,
+and `native/` holds the only copies that still carry the C2PA box the resample drops.
+
+### Switching back
+
+```
+python3 promote.py --provider flux-2-pro
+```
+
+The same command naming the other model. There is no undo flag and no second code path: once
+gpt-image-2 is shipped, flux-2-pro is an ordinary candidate at `candidates/flux-2-pro/`, and
+promoting it back is the identical operation with the two ids exchanged.
+
+### What a promotion does NOT do
+
+It does not materialise anything, and in this repository it currently has **nothing downstream to
+materialise into** — which is measured rather than assumed. `tessera-web/public` holds five PNGs;
+none of the five checksum-matches any entry in `MANIFEST.json`, and four of the five do not even
+use this repository's file names (`favicon-32x32.png` against this set's `favicon-32-32x32.png`,
+`apple-touch-icon-180x180.png` against `apple-touch-180-180x180.png`). `index.html` asks for the
+five names it has, so a `materialise.py --only chrome --flatten` into that directory today would
+add eight correctly-named files beside five differently-named ones the page would go on serving,
+and the switch would appear not to have happened.
+
+That predates both challengers and belongs to the consumer's naming, not to any model. It is
+written down here, and printed by `promote.py` at the end of a switch, because the close of a
+promotion is exactly where an operator looks for the next command and an incantation that silently
+no-ops is worse than none.
+
+---
+
 ## Provenance
 
 The code in this repository was written by **Claude Opus 5** and **Claude Fable 5**, assets

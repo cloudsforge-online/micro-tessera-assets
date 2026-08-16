@@ -2,6 +2,13 @@
 
 > ## CONCLUDED. This is a record, not an open evaluation.
 >
+> **Superseded in part by §9.** A second challenger, gpt-image-2, was later run against the same
+> 288 recorded prompts and **was promoted**: `assets/` now holds gpt-image-2 and FLUX 2 Pro sits in
+> `candidates/flux-2-pro/`, switchable back with one variable. Sections 0–8 are left exactly as
+> they were written — they are the record of the FIRST trial, and the sentence below saying FLUX
+> ships was true when it was written and is what §9 had to argue against. §9 says what changed,
+> what it cost, and what got worse.
+>
 > **FLUX 2 Pro ships.** The Qwen-Image 2512 challenger was generated in full (288 assets + 104
 > derivatives, 392 images in 394 files), judged against the criteria below, and lost on criterion 1 by
 > margins nothing else offsets. The owner has since withdrawn that model from the estate, and
@@ -415,3 +422,165 @@ generates no lettering at all, so the comparison is blind to Qwen's one previous
 (9/9 against FLUX rendering a wordmark as *"Home on the Ridge"*), and FLUX invented a dollar sign
 on `icons/royalty` here. And §7.4 — neither set was re-rolled by eye, so both are single-pass
 output.
+
+---
+
+## 9. The second model to ask: gpt-image-2, on the same 288 prompts
+
+§8.6 closed with "the 288 literal prompts remain the corpus, whenever there is a second model to
+ask." This is that. Everything in §§0–7 was fixed before either the reference or the Qwen
+challenger existed and none of it has been touched; this section is measured against those criteria
+and adds no new ones. What it does add is a decision the earlier trial never had to take, because
+its challenger lost: **this one won enough to be promoted, and §9.6 records what promoting it costs
+as well as what it buys.**
+
+The prompts are the RECORDED literals from `MANIFEST.json`, replayed unchanged. `reprompt` is
+reference-only by design, so no candidate asset was ever asked a different question from the one
+the reference was asked — which is what makes the two columns comparable and is also the reason
+§9.4's one systematic defect could not be repaired by rewording.
+
+### 9.1 The measurements, side by side
+
+Reproduce with `python3 compare.py --no-sheets`. Read `compare.py`'s own caveats with it; they are
+printed beside the rows and are not repeated here.
+
+| | flux-2-pro | gpt-image-2 | better |
+| --- | --- | --- | --- |
+| below accent floor | 46 | **27** | challenger |
+| ground off-target (>0.12 luma) | **52** | 53 | tie |
+| nearly blank / delivered≠declared | 0 / 0 | 0 / 0 | tie |
+| accent hue error, mean | 9.8° | **6.4°** | challenger |
+| accent hue error, SPREAD | 9.2 | **6.7** | challenger |
+| accent lightness, SPREAD | 0.125 | **0.103** | challenger |
+| ground luma spread | 0.1224 | **0.1207** | tie, and like-for-like here |
+| ink coverage spread, in-kind | **0.0916** | 0.0950 | reference |
+| median retention at 32px | **84%** | 82% | reference |
+| median retention at 16px | **74%** | 67% | reference |
+| marks under 50% at 16px | **25** | 40 | reference |
+| KB per megapixel, median | 599 | 784 | neither — a register difference, see §2 |
+| overlays outside their slot band, of 40 | 12 | **3** | challenger, by 4× |
+
+**The registration row is the one to read first**, because it is the check this repository invented
+for itself (`verify.py` check 8) and the only one that measures whether an asset can do its job
+rather than whether it is pretty. An avatar overlay is composited onto a base at a fixed offset; a
+`legs` garment whose ink starts at 0.27 when the `legs` band starts at 0.38 is drawn over the
+torso. The reference misregisters **twelve of forty**. The challenger misregisters **three**, and
+all three are near-misses argued asset by asset in `verify.py`'s `ACCEPTED_EXTENTS` — a braid that
+hangs to the sternum, a topknot with two loose locks, a tall boot whose shaft is up the calf
+because that is what a tall boot is.
+
+Re-derive both columns with:
+
+```sh
+python3 - <<'PY'
+import json, verify, providers
+for prov in providers.load():
+    if not prov.exists: continue
+    doc = json.loads(prov.manifest.read_text())
+    over = 0
+    for e in doc["assets"]:
+        label = providers.label_of(e)
+        if not label.startswith("avatar/") or "base-" in label: continue
+        slot = label.split("/")[1].split("-")[0]
+        if slot not in verify.SLOT_BANDS: continue
+        lo, hi = verify.SLOT_BANDS[slot]
+        _, y0, _, y1 = verify.opaque_box(prov.root / e["path"])
+        over += y0 < lo - verify.SLOT_MARGIN or y1 > hi + verify.SLOT_MARGIN
+    print(prov.id, over)
+PY
+```
+
+**One number in `compare.py`'s own output must not be read as a gpt-image-2 figure.** Section 4's
+by-eye artefact table has a filled column for `flux-2-pro` and a dash for the challenger, because
+`review/compare/artefacts.json` holds the tally from the FIRST trial — its two keys are
+`flux-2-pro` and `qwen-image-2512`. Its "overlay misregistered: 32" is a reading taken in that era,
+against that era's bands, and it is **not** the 12 measured above. Nothing has been back-filled into
+that file for this run; §9.4 is the by-eye record for this one and says what it covered.
+
+### 9.2 Cost, in the unit each model bills in — not combined
+
+    flux-2-pro     868.5 provider image units          288 generations, 3.02 per image
+    gpt-image-2    1,744,040 output image tokens       288 generations, 6,055.7 per image
+
+104 derivatives are free in both columns: they are Pillow cuts of that model's own output. The two
+figures are not divided into each other for the reason §6 gives.
+
+### 9.3 Retries and disclosure, and why neither scores
+
+    assets needing >=1 retry     239/288          25/288
+    total retries                975              32
+    carries C2PA (measured)      283/392          59/392
+
+The reference ran against a shared serverless deployment under a per-minute quota and 56% of its
+attempts came back `429` in about 0.2s against a 16.8s median success; the challenger had a
+dedicated deployment and no neighbour. This row counts wire contention on one side and nothing on
+the other. C2PA presence is a disclosure fact about the endpoint, not about the picture.
+
+### 9.4 What was looked at, by eye — and the one systematic difference
+
+Scope: all 32 terrain plates, all 24 glyphs, all 8 chrome entries and the 6 avatar overlays that
+`verify.py` had flagged, both models, same asset side by side, scored left to right. That is 70 of
+288 per model. It is not the whole set and the sheets it was read off are
+`review/compare/compare-{terrain,glyphs,avatar,chrome}.png`.
+
+**The difference that explains every legibility row above is one choice, and the brief permits
+both.** The glyph and chrome prompts describe a mark that may be *filled or stroked*. FLUX fills.
+gpt-image-2 strokes — a consistent, even outline of the same weight on all 24 glyphs and on the
+mark the 8 chrome entries are cut from. Stroked art is not worse art; the `category-instruments`
+lute and the `category-flooring` rug are better drawings than the reference's, and the reference's
+`tool-place` is barely a glyph at all. But a stroke is a thin ring of ink with ground on both sides
+of it, and a Lanczos downscale to 16px averages the ring into the ground. That is the whole of
+"marks under 50% at 16px: 40 against 25", and it is why the three worst-retaining assets in the
+challenger's column are `chrome/favicon-512`, `chrome/favicon-192` and `chrome/apple-touch-180` —
+the three places in this product where 16px is not hypothetical.
+
+**It could not be repaired by rewording, and that is a property of the harness rather than an
+oversight.** `reprompt` is reference-only on purpose: a candidate that gets a clarified brief is no
+longer answering the same question as the set it is being compared with. A plain re-roll replays
+the same literal, and the same literal is what produced a stroke.
+
+**Two by-eye findings in the challenger's favour, both about what an overlay has to be.** The
+reference's `hair-braid` and `hair-topknot` have a skin-coloured neck, shoulder and ear drawn into
+them, so compositing either onto a base paints a second neck over the first; the challenger's are
+hair and nothing else. And the challenger's terrain plates are painterly where the reference's are
+photographic — lighter, softer, and (`kilnyard-ground`) fired clay rather than a brick course. That
+is the register difference the KB/MP row is pointing at, and criterion 2 counts it as a
+within-set property: both sets are internally consistent, in different registers.
+
+### 9.5 The three assets whose bytes disagreed with their own manifest
+
+`terrain/grove-verge`, `terrain/grove-water` and `terrain/kilnyard-ground` were committed with
+`sha256` and `byteSize` rows that did not match the files beside them. That is not a model
+finding — it is a defect in this run's bookkeeping — but it is recorded here because a manifest
+that can be wrong once can be wrong silently, and the only reason it was caught is that
+`verify.py`'s conformance check is fatal for a shipped set. All three were regenerated and
+re-recorded. **A re-roll returns `postProcessing: []` and the endpoint's own delivered ground**, so
+`normalise_ground.py --provider` and `cutout.py --provider` have to be re-run over anything
+redrawn; skipping that step is what turns a green set red, and it did, twice, before it was written
+down.
+
+### 9.6 Verdict: promote, and what promoting costs
+
+**gpt-image-2 is promoted to `assets/` and flux-2-pro is demoted to `candidates/flux-2-pro/`.**
+The set that decides it is the avatar overlays: registration is the only measured criterion here
+that is about function rather than taste, and 3 against 12 is not a margin that taste arguments
+reach. Colour discipline agrees — tighter accent hue, tighter spread, 27 assets below the accent
+floor against 46 — and colour discipline is what §2 fixed in advance as the test of whether a set
+looks like one hand.
+
+**What is worse after the switch, stated plainly rather than left to be discovered.** The three
+chrome favicons are stroked and keep 45% contrast at 16px where the reference's filled mark keeps
+more; fifteen more glyphs fall under half contrast at 16px. Nothing else regresses, and the
+regression is confined to the two kinds §9.4 names.
+
+**The switch is one variable and it is reversible in both directions.** `providers.json`'s
+`reference` names the shipped set; `promote.py` moves five lines of it and vacates the outgoing set
+into its own `candidates/` directory rather than deleting it; `materialise.py --provider` resolves
+either set against the reference's relative paths; and the estate mounts the result through
+`CF_WORLD_ASSETS`, which is a path in one env file. `verify.py`'s `ACCEPTED_EXTENTS` is keyed by
+provider id, so the acceptances argued for one set do not silently excuse the other — before that
+fix the switch was one-way, and its self-test now covers both sets in both directions.
+
+**The limits of all of the above.** One run, 288 images, one setting, one brief, one pair of eyes,
+70 of 288 assets looked at rather than all of them, and a by-eye tally file that still belongs to
+the previous trial. The tables reproduce on demand; the prose in §9.4 does not.

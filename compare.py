@@ -257,9 +257,30 @@ class SetReading:
     # ---- criterion 6: cost, in this provider's own unit and no other
 
     def cost(self) -> tuple[str, str]:
-        """Returns (figure, how it was arrived at). Never a number without its unit."""
+        """Returns (figure, how it was arrived at). Never a number without its unit.
+
+        ## Why this dispatches on `basis` and not on `unit`
+
+        It used to read `if billing["unit"] == "provider image unit"`, which worked only because
+        exactly two units existed: FLUX's `provider image unit` and Cosmos's `deployment hour`.
+        Testing that string was really asking "does this provider bill per image?" through a
+        stand-in that happened to answer correctly. gpt-image-2 broke it: it bills per image too,
+        but in `output image token`, so it fell through to the deployment-hour path, demanded a
+        `DEPLOYMENT.json` that will never exist for a serverless endpoint, and reported UNKNOWN for
+        a set whose per-asset cost is recorded on every single row.
+
+        `basis` is the field that actually names the billing SHAPE, and it is the one this has to
+        branch on, because the shape is what decides where the number comes from — the manifest's
+        own rows, or an operator-written window this repository cannot measure. `unit` stays in the
+        output: it is never dropped from a figure, and it is never assumed.
+
+        parity.test.ts pins the invariant this relies on — a per-image `basis` must name
+        `providerCostUnits` as its `source` and carry a null `sku`; an hourly one must name
+        DEPLOYMENT.json and carry a real sku — so a fourth provider cannot quietly arrive with a
+        basis nothing here can dispatch on.
+        """
         billing = self.provider.billing
-        if billing["unit"] == "provider image unit":
+        if billing["basis"] == "per image generated":
             # Summed over GENERATED entries only. A derivative inherits its parent's cost so a
             # human can see what the file behind it cost, and summing the whole manifest therefore
             # double-counts: aetherholm-assets reads as 316.5 units that way against a true 289.5.
@@ -269,6 +290,18 @@ class SetReading:
                 f"{units:g} {billing['unit']}s",
                 f"{len(self.generated)} generations, {per:.2f} per image, "
                 f"{len(self.assets) - len(self.generated)} derivatives free",
+            )
+
+        if billing["basis"] != "per hour the deployment exists, whether or not it generates anything":
+            # An unrecognised basis says UNKNOWN rather than falling through to the hourly path.
+            # The old `unit` test had no such arm and so treated everything-that-was-not-FLUX as
+            # deployment-hour billing, which is precisely how a token-billed serverless endpoint
+            # came to be asked for a DEPLOYMENT.json. Reading a figure out of the wrong shape is
+            # worse than admitting the shape is new.
+            return (
+                "UNKNOWN",
+                f"bills per {billing['unit']} on a basis this script has no arm for "
+                f'("{billing["basis"]}"); no figure is invented from a shape it cannot read',
             )
 
         window = self.provider.deployment
