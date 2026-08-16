@@ -185,7 +185,14 @@ test('the unimplemented error names the unknowns and leaks no credential', () =>
 test('the registry describes the models rather than counting them', () => {
   assert.equal(REFERENCE.implemented, true)
   assert.equal(REFERENCE.shipped, true)
-  assert.equal(REFERENCE.billing.unit, 'provider image unit')
+  // NOT `assert.equal(REFERENCE.billing.unit, 'provider image unit')`, which is what stood here and
+  // is what failed the first time the reference was actually switched. It pinned FLUX's unit onto
+  // the ROLE, so promote.py — which only rewrites five lines of providers.json and touches no code
+  // — turned red on a promotion that was correct in every other respect. A reference is a position
+  // a model occupies, not a model; the only thing the position can be asked to guarantee is that
+  // whoever holds it has a unit at all, and the loop at the foot of this test checks that unit
+  // against its basis for every provider, reference included.
+  assert.ok(REFERENCE.billing.unit.length > 0, 'the reference bills in no unit')
   // Deliberately NOT an arity assertion. The comparison was three-way, is two-way because Cosmos
   // failed to deploy, and will be three-way again — the estate has a 3D/animation gap FLUX cannot
   // fill. A test pinning the count is how a design gets collapsed back into hardcoded providers.

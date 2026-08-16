@@ -79,7 +79,7 @@
     "most of this exercise while the reference stays green. verify.py takes --provider and reads",
     "exactly one manifest, so those two states do not collide."
   ],
-  "reference": "flux-2-pro",
+  "reference": "gpt-image-2",
   "$identity": [
     "How an asset is identified in THIS repository's manifests. The one thing that genuinely",
     "differs between the estate's asset repositories: micro-brand keys on surface + kind, and the",
@@ -104,9 +104,9 @@
       "label": "FLUX 2 Pro",
       "vendor": "Black Forest Labs, served by Azure AI Foundry",
       "adapter": "foundry-serverless",
-      "root": ".",
+      "root": "candidates/flux-2-pro",
       "status": "live",
-      "shipped": true,
+      "shipped": false,
       "implemented": true,
       "concurrency": 3,
       "env": {
@@ -140,9 +140,9 @@
       "vendor": "OpenAI, served by Azure AI Foundry (AIServices S0, Sweden Central)",
       "adapter": "openai-images",
       "dialect": "literal",
-      "root": "candidates/gpt-image-2",
+      "root": ".",
       "status": "live",
-      "shipped": false,
+      "shipped": true,
       "implemented": true,
       "concurrency": 1,
       "env": {
