@@ -149,6 +149,18 @@ SLOT_MARGIN = 0.04
 
 #: THE OVERLAYS THAT ARE ACCEPTED OUTSIDE THEIR BAND, ONE LINE EACH, WITH THE REASON.
 #:
+#: **KEYED BY PROVIDER, BECAUSE AN ACCEPTANCE IS ABOUT BYTES AND EACH SET HAS ITS OWN.** This table
+#: used to be one flat dict of asset -> extent, which was correct while one set could ever be
+#: shipped and became wrong the moment a challenger could be promoted: `check_registration` applies
+#: acceptances to the SHIPPED set, so promoting gpt-image-2 would have handed it twelve extents
+#: measured off FLUX's drawings of the same twelve garments, and demoting it again would have held
+#: FLUX to whatever the challenger happened to draw. Both directions are false, and the second is
+#: worse than the first because it makes the switch one-way in practice while `promote.py` still
+#: advertises it as reversible.
+#:
+#: So each set carries its own list and is graded against nothing but its own. A set with no entry
+#: here is held to the slot bands alone, which is the strict reading and the right default.
+#:
 #: **The band is not widened and must not be.** Widening `hair` to fit a braid that falls to the
 #: shoulder blade would also admit a hair plate that drew an entire clothed figure, which is the
 #: failure this check exists to catch and which two runs of this repository have actually produced.
@@ -178,7 +190,10 @@ SLOT_MARGIN = 0.04
 #:   SCALE     neither. The model draws this item larger, or higher, than the brief asks and five
 #:             replays of the recorded prompt did not move it. Recorded as what it is rather than
 #:             dressed up as a subject, because the difference is the whole value of the list.
-ACCEPTED_EXTENTS: dict[str, tuple[float, float, str]] = {
+ACCEPTED_EXTENTS: dict[str, dict[str, tuple[float, float, str]]] = {}
+
+#: FLUX 2 Pro, the reference set. Twelve of forty overlays, measured off the bytes at assets/.
+ACCEPTED_EXTENTS["flux-2-pro"] = {
     # ---- SUBJECT. The band cannot hold what content/avatars.json asks for.
     "avatar/feet-tall-boots": (
         0.600, 0.971,
@@ -249,6 +264,31 @@ ACCEPTED_EXTENTS: dict[str, tuple[float, float, str]] = {
         "leggings and breeches. Three of the five legs plates share this bias, which is a finding "
         "about the slot's prompt rather than about three garments",
     ),
+}
+
+#: gpt-image-2. THREE of forty, against the reference's twelve, on the identical prompts — the
+#: challenger registers this slot four times better than the set it is replacing, and that is the
+#: honest headline rather than the three entries below it.
+#:
+#: SIX were out of band on the first draw. Each was re-rolled ONCE, replaying its recorded prompt,
+#: and three of the six came back inside their band; what is left here is what a second independent
+#: draw did not move, which is the standard this table is worth having at. The extents are measured
+#: off the bytes at candidates/gpt-image-2/assets/ by the same `opaque_box` the check uses, after
+#: `normalise_ground.py` and `cutout.py` — a freshly generated overlay is an opaque rectangle on a
+#: delivered ground and measures 0.00-1.00 until both have run.
+ACCEPTED_EXTENTS["gpt-image-2"] = {
+    # ---- SUBJECT. The band cannot hold what content/avatars.json asks for.
+    "avatar/feet-tall-boots": (0.650, 0.971, "SUBJECT: a TALL boot is a shaft up the calf, and the "
+                               "feet band stops at the ankle. The reference is excused the same "
+                               "garment more generously, at 0.600"),
+    "avatar/hair-braid": (0.027, 0.649, "SUBJECT: the braid hangs to the sternum, which is where a "
+                          "braid hangs. It is longer than the reference's 0.541 and overlaps the "
+                          "`top` slot rather than the `legs` one, so it composites over a garment "
+                          "and never over bare silhouette"),
+    "avatar/hair-topknot": (0.035, 0.461, "SUBJECT: two loose locks fall to the jaw below the bun. "
+                            "It clears the band by 0.001 past the margin, and the plate is a "
+                            "better overlay than the reference's, which has a skin-coloured neck "
+                            "and shoulder drawn into it"),
 }
 
 #: How far a listed asset may drift from the extent recorded for it. Deliberately much tighter
@@ -511,7 +551,7 @@ def check_keyed(provider, document: dict) -> list[str]:
     return problems
 
 
-def check_registration(provider, document: dict) -> list[str]:
+def check_registration(provider, document: dict, as_shipped: bool = False) -> list[str]:
     """CHECK 8 — every avatar overlay sits inside the vertical band its slot declares.
 
     doc 23 §2.8: every overlay is generated against the same base silhouette, and §2.15 item 7
@@ -523,8 +563,16 @@ def check_registration(provider, document: dict) -> list[str]:
 
     A short list of individual plates is held to a RECORDED EXTENT instead of to the slot band; see
     `ACCEPTED_EXTENTS` for the reasoning and for why the band itself is not widened. Those
-    acceptances apply only to the shipped set — they are judgements about particular bytes, and a
-    candidate that replayed the same prompt would draw something else.
+    acceptances are judgements about particular bytes, so a set is only ever graded against its own
+    and a candidate is held to the bare slot bands while it is being judged — a candidate that
+    replayed the same prompt drew something else, and scoring it against the reference's drawings
+    would be scoring it against the wrong pictures.
+
+    **UNDER `--as-shipped` IT READS THE CANDIDATE'S OWN LIST INSTEAD, AND THAT IS THE WHOLE POINT
+    OF THE FLAG.** `promote.py` asks "would this set be green if it shipped", and the set that ships
+    is graded against its own acceptances; asking it under the strict candidate rules would refuse
+    every promotion for a deviation the outgoing set is itself excused for. So the flag switches
+    which list is consulted, never whether one is.
     """
     problems: list[str] = []
     for asset in document["assets"]:
@@ -544,7 +592,11 @@ def check_registration(provider, document: dict) -> list[str]:
         lo, hi = SLOT_BANDS[slot]
         in_band = not (top < lo - SLOT_MARGIN or bottom > hi + SLOT_MARGIN)
 
-        accepted = ACCEPTED_EXTENTS.get(asset["asset"]) if provider.shipped else None
+        accepted = (
+            ACCEPTED_EXTENTS.get(provider.id, {}).get(asset["asset"])
+            if (provider.shipped or as_shipped)
+            else None
+        )
         if accepted is None:
             if not in_band:
                 problems.append(
@@ -1081,16 +1133,27 @@ def self_test() -> int:
     # and this has to hold in a checkout that has none. Each entry must be genuinely outside its
     # slot band — an acceptance for an asset that already fits is the stale case check_registration
     # reports — and must be an extent rather than a licence.
-    for key, value in ACCEPTED_EXTENTS.items():
-        low, high, why = value
-        slot = key.split("/")[-1].split("-")[0]
-        lo, hi = SLOT_BANDS[slot]
-        outside = low < lo - SLOT_MARGIN or high > hi + SLOT_MARGIN
-        checks.append((f"{key}: its accepted extent is outside its slot band", outside, [str(value)]))
+    # Every set's list is asserted, not just the shipped one's: a stale entry in the demoted set's
+    # table is exactly what breaks the day somebody switches back.
+    known = {p.id for p in providers.load()}
+    for provider_id, table in ACCEPTED_EXTENTS.items():
         checks.append(
-            (f"{key}: accepted extent is bounded and reasoned",
-             0.0 <= low < high <= 1.0 and (high - low) < 0.95 and len(why) > 20, [str(value)])
+            (f"{provider_id}: the set its acceptances are recorded for is in providers.json",
+             provider_id in known, sorted(known))
         )
+        for key, value in table.items():
+            low, high, why = value
+            slot = key.split("/")[-1].split("-")[0]
+            lo, hi = SLOT_BANDS[slot]
+            outside = low < lo - SLOT_MARGIN or high > hi + SLOT_MARGIN
+            checks.append(
+                (f"{provider_id} {key}: its accepted extent is outside its slot band",
+                 outside, [str(value)])
+            )
+            checks.append(
+                (f"{provider_id} {key}: accepted extent is bounded and reasoned",
+                 0.0 <= low < high <= 1.0 and (high - low) < 0.95 and len(why) > 20, [str(value)])
+            )
 
     print("===== self-test: breaking each cross-set guard against a fixture")
     failed = 0
@@ -1174,7 +1237,7 @@ def main(argv: list[str]) -> int:
             for problem in keyed:
                 print(f"  -> {problem}")
         failures.extend(keyed)
-        registration = check_registration(provider, document)
+        registration = check_registration(provider, document, as_shipped=args.as_shipped)
         if registration:
             print(f"----- registration: {len(registration)} misregistered overlay(s)")
             for problem in registration:
